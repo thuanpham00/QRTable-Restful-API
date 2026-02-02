@@ -1,3 +1,4 @@
+import { ManagerRoom } from '@/constants/type'
 import {
   addMenuItemToMenu,
   createMenu,
@@ -8,6 +9,7 @@ import {
   getMenuItemDetail,
   getMenuItemFromMenu,
   getMenuList,
+  getSuggestedMenu,
   updateDishInMenu,
   updateMenu
 } from '@/controllers/menu.controller'
@@ -17,13 +19,14 @@ import {
   AddDishToMenuType,
   CreateMenuBody,
   CreateMenuBodyType,
-  MenuActive,
   MenuActiveRes,
   MenuActiveResType,
   MenuItemListRes,
   MenuItemListResType,
   MenuItemRes,
   MenuItemResType,
+  MenuItemSuggestRes,
+  MenuItemSuggestResType,
   MenuListRes,
   MenuListResType,
   MenuParams,
@@ -86,6 +89,25 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
       }
     ),
     fastify.get<{
+      Reply: MenuItemSuggestResType
+    }>(
+      '/suggested',
+      {
+        schema: {
+          response: {
+            200: MenuItemSuggestRes
+          }
+        }
+      },
+      async (request, reply) => {
+        const data = await getSuggestedMenu()
+        reply.send({
+          data: data as MenuItemSuggestResType['data'],
+          message: 'Lấy món ăn đề xuất thành công!'
+        })
+      }
+    ),
+    fastify.get<{
       Params: MenuParamsType
       Reply: MenuResType
     }>(
@@ -125,6 +147,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
     },
     async (request, reply) => {
       const menu = await createMenu(request.body)
+      fastify.io.to(ManagerRoom).emit('update-menu', menu)
       reply.send({
         data: menu as MenuResType['data'],
         message: 'Tạo menu thành công!'
@@ -153,6 +176,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
     },
     async (request, reply) => {
       const menu = await updateMenu(request.params.id, request.body)
+      fastify.io.to(ManagerRoom).emit('update-menu', menu)
       reply.send({
         data: menu as MenuResType['data'],
         message: 'Cập nhật menu thành công!'
@@ -178,6 +202,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
     },
     async (request, reply) => {
       const result = await deleteMenu(request.params.id)
+      fastify.io.to(ManagerRoom).emit('update-menu', result)
       reply.send({
         message: 'Xóa menu thành công!',
         data: result as MenuResType['data']
@@ -223,8 +248,6 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
     },
     async (request, reply) => {
       const menuItem = await getMenuItemDetail(request.params.id)
-      console.log(menuItem)
-      console.log(request.params.id)
       reply.send({
         data: menuItem as MenuItemResType['data'],
         message: 'Lấy chi tiết món ăn trong menu thành công!'
@@ -251,6 +274,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
     },
     async (request, reply) => {
       const menuItemList = await addMenuItemToMenu(request.body)
+      fastify.io.to(ManagerRoom).emit('update-menu-item', menuItemList)
       reply.send({
         data: menuItemList as MenuItemResType['data'],
         message: 'Thêm món ăn vào menu thành công!'
@@ -279,6 +303,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
     },
     async (request, reply) => {
       const menuItemList = await updateDishInMenu(request.params.id, request.body)
+      fastify.io.to(ManagerRoom).emit('update-menu-item', menuItemList)
       reply.send({
         data: menuItemList as MenuItemResType['data'],
         message: 'Cập nhật món ăn trong menu thành công!'
@@ -305,6 +330,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
     },
     async (request, reply) => {
       const result = await deleteMenuItem(request.params.id)
+      fastify.io.to(ManagerRoom).emit('update-menu-item', result)
       reply.send({
         message: 'Xóa món ăn trong menu thành công!',
         data: result as MenuItemResType['data']

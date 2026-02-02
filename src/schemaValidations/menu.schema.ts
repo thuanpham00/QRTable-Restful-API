@@ -84,6 +84,13 @@ export const MenuItemListRes = z.object({
 
 export type MenuItemListResType = z.TypeOf<typeof MenuItemListRes>
 
+export const MenuItemSuggestRes = z.object({
+  data: z.array(MenuItemSchema),
+  message: z.string()
+})
+
+export type MenuItemSuggestResType = z.TypeOf<typeof MenuItemSuggestRes>
+
 export const AddDishToMenu = z.object({
   dishId: z.number(),
   menuId: z.number(),

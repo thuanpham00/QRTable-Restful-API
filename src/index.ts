@@ -26,6 +26,7 @@ import autoRemoveRefreshTokenJob from '@/jobs/autoRemoveRefreshToken.job'
 import categoryRoutes from '@/routes/category.route'
 import menusRoutes from '@/routes/menu.route'
 import ingredientRoutes from '@/routes/ingredient.route'
+import guestCallRoutes from '@/routes/guest-call.route'
 
 const fastify = Fastify({
   logger: false
@@ -92,11 +93,14 @@ const start = async () => {
     fastify.register(testRoutes, {
       prefix: '/test'
     })
+    fastify.register(indicatorRoutes, {
+      prefix: '/indicators'
+    })
     fastify.register(guestRoutes, {
       prefix: '/guest'
     })
-    fastify.register(indicatorRoutes, {
-      prefix: '/indicators'
+    fastify.register(guestCallRoutes, {
+      prefix: '/guest-calls'
     })
     await initOwnerAccount()
     await fastify.listen({

@@ -92,7 +92,6 @@ export default async function categoryRoutes(fastify: FastifyInstance, options: 
       })
     },
     async (request, reply) => {
-      console.log(request.body)
       const dishCategory = await createDishCategory(request.body)
       reply.send({
         data: dishCategory as DishCategoryResType['data'],

@@ -1,4 +1,4 @@
-import { ManagerRoom, Role } from '@/constants/type'
+import { GuestCallStatus, ManagerRoom, Role } from '@/constants/type'
 import prisma from '@/database'
 import { AuthError } from '@/utils/errors'
 import { getChalk } from '@/utils/helpers'
@@ -55,6 +55,26 @@ export const socketPlugin = fastifyPlugin(async (fastify) => {
     console.log(chalk.cyanBright('🔌 Socket connected:', socket.id))
     socket.on('disconnect', async (reason) => {
       console.log(chalk.redBright('🔌 Socket disconnected:', socket.id))
+    })
+
+    socket.on('guest:call-waiter', async (data: { tableNumber: string; idGuest: string }) => {
+      await prisma.guestCall.create({
+        data: {
+          tableNumber: Number(data.tableNumber),
+          status: GuestCallStatus.Pending,
+          accountId: null,
+          guestId: socket.handshake.auth.decodedAccessToken.userId
+        }
+      })
+      const countGuestCallPending = await prisma.guestCall.count({
+        where: {
+          status: GuestCallStatus.Pending
+        }
+      })
+      fastify.io.to(ManagerRoom).emit('count-call-waiter', {
+        message: 'Khách gọi phục vụ',
+        countPending: countGuestCallPending
+      })
     })
   })
 })

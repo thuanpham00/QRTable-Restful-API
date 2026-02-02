@@ -70,6 +70,29 @@ export const getMenuIsActive = async () => {
   })
 }
 
+export const getSuggestedMenu = async () => {
+  // Get top 5 dishes by popularity, then return their menuItems belonging to an active menu
+  const top = await prisma.dish.findMany({
+    orderBy: { popularity: 'desc' },
+    take: 5,
+    select: { id: true }
+  })
+  const topIds = top.map((t) => t.id)
+
+  const items = await prisma.menuItem.findMany({
+    where: {
+      dishId: { in: topIds },
+      menu: { isActive: true }
+    },
+    include: {
+      dish: { include: { category: true } }
+    },
+    orderBy: { createdAt: 'desc' }
+  })
+
+  return items
+}
+
 export const getMenuDetail = (id: number) => {
   return prisma.menu.findUniqueOrThrow({
     where: {

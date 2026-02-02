@@ -11,8 +11,6 @@ import {
   updateDish,
   updateIngredientToDish
 } from '@/controllers/dish.controller'
-import { updateIngredient } from '@/controllers/ingredient.controller'
-import { addMenuItemToMenu } from '@/controllers/menu.controller'
 import { pauseApiHook, requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   AddIngredientToDish,

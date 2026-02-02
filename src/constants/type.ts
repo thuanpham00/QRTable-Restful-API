@@ -53,3 +53,13 @@ export const MenuItemStatus = {
 } as const
 
 export const MenuItemStatusValues = ['Available', 'OutOfStock', 'Hidden'] as const
+
+export const GuestCallStatus = {
+  Pending: 'Pending',
+  Completed: 'Completed',
+  Rejected: 'Rejected'
+} as const
+
+export const GuestCallValues = [GuestCallStatus.Pending, GuestCallStatus.Completed, GuestCallStatus.Rejected] as const
+
+export type GuestCallStatusType = keyof typeof GuestCallStatus

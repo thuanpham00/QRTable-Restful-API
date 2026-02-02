@@ -1,3 +1,4 @@
+import { DishStatus, MenuItemStatus } from '@/constants/type'
 import prisma from '@/database'
 import {
   CreateDishBodyType,
@@ -117,7 +118,18 @@ export const createDish = (data: CreateDishBodyType) => {
   })
 }
 
-export const updateDish = (id: number, data: UpdateDishBodyType) => {
+export const updateDish = async (id: number, data: UpdateDishBodyType) => {
+  if (data.status === DishStatus.Discontinued) {
+    // nếu món ăn bị ngưng phục vụ thì set tất cả menuItem liên quan về hidden
+    await prisma.menuItem.updateMany({
+      where: {
+        dishId: id
+      },
+      data: {
+        status: MenuItemStatus.HIDDEN
+      }
+    })
+  }
   return prisma.dish.update({
     where: {
       id

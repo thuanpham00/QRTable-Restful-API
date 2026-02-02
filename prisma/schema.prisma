@@ -26,6 +26,7 @@ model Account {
   ownerId      Int?
   refreshToken RefreshToken[]
   sockets      Socket[]
+  guestCalls   GuestCall[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -227,11 +228,13 @@ model GuestCall {
   tableNumber Int?
   table       Table?   @relation(fields: [tableNumber], references: [number], onDelete: SetNull, onUpdate: NoAction)
   status      String   @default("Pending") // "Pending", "Completed", 
+  accountId   Int?     // Nhân viên xử lý cuộc gọi
+  account     Account? @relation(fields: [accountId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([guestId])
   @@index([tableNumber])
-  @@index([status])
+  @@index([accountId])
   @@index([createdAt])
 }
