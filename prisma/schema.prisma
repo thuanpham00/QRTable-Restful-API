@@ -87,6 +87,8 @@ model Order {
   quantity       Int
   orderHandler   Account?     @relation(fields: [orderHandlerId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   orderHandlerId Int?
+
+  orderMode      String       @default("DINE_IN")
   status         String       @default("Pending")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -99,6 +101,8 @@ model Table {
   guests    Guest[]
   guestCalls GuestCall[]
   status    String   @default("Available")
+  notes     String?
+  typeQR    String?  @default("DINE_IN")
   token     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

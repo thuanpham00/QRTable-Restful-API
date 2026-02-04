@@ -76,7 +76,7 @@ export default async function guestCallRoutes(fastify: FastifyInstance, options:
       Reply: GuestCallCountResType
       Querystring: GetOrdersQueryParamsType
     }>(
-      '/count-pending',
+      '/count-pending-today',
       {
         schema: {
           response: {

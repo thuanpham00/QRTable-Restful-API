@@ -1,12 +1,14 @@
-import { ManagerRoom } from '@/constants/type'
+import { ManagerRoom, OrderStatus } from '@/constants/type'
 import {
   createOrdersController,
+  getCountOrderTodayController,
   getOrderDetailController,
   getOrdersController,
   payOrdersController,
   updateOrderController
 } from '@/controllers/order.controller'
 import { requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { GuestCallCountRes, GuestCallCountResType } from '@/schemaValidations/guest-call.schema'
 import {
   CreateOrdersBody,
   CreateOrdersBodyType,
@@ -126,6 +128,11 @@ export default async function orderRoutes(fastify: FastifyInstance, options: Fas
       } else {
         fastify.io.to(ManagerRoom).emit('update-order', result.order)
       }
+      if (request.body.status === OrderStatus.Paid) {
+        fastify.io.to(ManagerRoom).emit('count-order', {
+          message: 'Cập nhật sl đơn hàng'
+        })
+      }
       reply.send({
         message: 'Cập nhật đơn hàng thành công',
         data: result.order as UpdateOrderResType['data']
@@ -158,5 +165,29 @@ export default async function orderRoutes(fastify: FastifyInstance, options: Fas
         data: result.orders as PayGuestOrdersResType['data']
       })
     }
-  )
+  ),
+    fastify.get<{
+      Reply: GuestCallCountResType
+      Querystring: GetOrdersQueryParamsType
+    }>(
+      '/count-order-today',
+      {
+        schema: {
+          response: {
+            200: GuestCallCountRes
+          },
+          querystring: GetOrdersQueryParams
+        }
+      },
+      async (request, reply) => {
+        const result = await getCountOrderTodayController({
+          fromDate: request.query.fromDate,
+          toDate: request.query.toDate
+        })
+        reply.send({
+          message: 'Lấy số lượng đơn hàng chưa thanh toán thành công',
+          data: result
+        })
+      }
+    )
 }

@@ -6,7 +6,6 @@ import {
   getDishDetail,
   getDishIngredientDetail,
   getDishList,
-  getDishListWithPagination,
   getIngredientDishList,
   updateDish,
   updateIngredientToDish
@@ -65,35 +64,6 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
       reply.send({
         data: data as DishListResType['data'],
         pagination: pagination,
-        message: 'Lấy danh sách món ăn thành công!'
-      })
-    }
-  )
-
-  fastify.get<{
-    Reply: DishListWithPaginationResType
-    Querystring: DishListWithPaginationQueryType
-  }>(
-    '/pagination',
-    {
-      schema: {
-        response: {
-          200: DishListWithPaginationRes
-        },
-        querystring: DishListWithPaginationQuery
-      }
-    },
-    async (request, reply) => {
-      const { page, limit } = request.query
-      const data = await getDishListWithPagination(page, limit)
-      reply.send({
-        data: {
-          items: data.items as DishListWithPaginationResType['data']['items'],
-          totalItem: data.totalItem,
-          totalPage: data.totalPage,
-          page,
-          limit
-        },
         message: 'Lấy danh sách món ăn thành công!'
       })
     }

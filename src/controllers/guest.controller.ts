@@ -142,7 +142,7 @@ export const guestCreateOrdersController = async (guestId: number, body: GuestCr
       throw new Error(`Bàn ${table.number} đã được đặt trước, vui lòng đăng xuất và chọn bàn khác`)
     }
     const orders = await Promise.all(
-      body.map(async (order) => {
+      body.listOrder.map(async (order) => {
         const menuItem = await tx.menuItem.findUniqueOrThrow({
           where: {
             id: order.menuItemId
@@ -190,6 +190,7 @@ export const guestCreateOrdersController = async (guestId: number, body: GuestCr
             tableNumber: guest.tableNumber,
             dishSnapshotId: dishSnapshot.id,
             quantity: order.quantity,
+            orderMode: body.typeOrder,
             orderHandlerId: null,
             status: OrderStatus.Pending
           },

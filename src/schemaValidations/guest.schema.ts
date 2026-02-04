@@ -1,4 +1,4 @@
-import { Role } from '@/constants/type'
+import { OrderModeTypeValues, Role } from '@/constants/type'
 import { OrderSchema } from '@/schemaValidations/order.schema'
 import z from 'zod'
 
@@ -30,12 +30,15 @@ export const GuestLoginRes = z.object({
 
 export type GuestLoginResType = z.TypeOf<typeof GuestLoginRes>
 
-export const GuestCreateOrdersBody = z.array(
-  z.object({
-    menuItemId: z.number(),
-    quantity: z.number()
-  })
-)
+export const GuestCreateOrdersBody = z.object({
+  listOrder: z.array(
+    z.object({
+      menuItemId: z.number(),
+      quantity: z.number()
+    })
+  ),
+  typeOrder: z.enum(OrderModeTypeValues)
+})
 
 export type GuestCreateOrdersBodyType = z.TypeOf<typeof GuestCreateOrdersBody>
 

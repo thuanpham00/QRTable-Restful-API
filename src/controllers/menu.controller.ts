@@ -189,7 +189,7 @@ export const getMenuItemFromMenu = async (menuId: number) => {
 }
 
 export const getMenuItemDetail = async (menuItemId: number) => {
-  return await prisma.menuItem.findFirst({
+  const findMenuItem = await prisma.menuItem.findFirst({
     where: {
       id: menuItemId
     },
@@ -201,6 +201,18 @@ export const getMenuItemDetail = async (menuItemId: number) => {
       }
     }
   })
+  const dishId = findMenuItem?.dishId
+  const listIngredient = await prisma.dishIngredient.findMany({
+    where: { dishId, isMain: true },
+    include: {
+      ingredient: {
+        select: { name: true }
+      }
+    }
+  })
+  const listIngredientName = listIngredient.map((item) => item.ingredient.name)
+  const data = { ...findMenuItem, dish: { ...findMenuItem?.dish, ingredients: listIngredientName } }
+  return data
 }
 
 export const addMenuItemToMenu = async (data: AddDishToMenuType) => {

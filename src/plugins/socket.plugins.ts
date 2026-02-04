@@ -1,4 +1,4 @@
-import { GuestCallStatus, ManagerRoom, Role } from '@/constants/type'
+import { GuestCallStatus, ManagerRoom, OrderStatus, Role } from '@/constants/type'
 import prisma from '@/database'
 import { AuthError } from '@/utils/errors'
 import { getChalk } from '@/utils/helpers'
@@ -66,14 +66,8 @@ export const socketPlugin = fastifyPlugin(async (fastify) => {
           guestId: socket.handshake.auth.decodedAccessToken.userId
         }
       })
-      const countGuestCallPending = await prisma.guestCall.count({
-        where: {
-          status: GuestCallStatus.Pending
-        }
-      })
       fastify.io.to(ManagerRoom).emit('count-call-waiter', {
-        message: 'Khách gọi phục vụ',
-        countPending: countGuestCallPending
+        message: 'Cập nhật sl khách gọi phục vụ'
       })
     })
   })

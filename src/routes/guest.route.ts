@@ -120,6 +120,9 @@ export default async function guestRoutes(fastify: FastifyInstance, options: Fas
       const guestId = request.decodedAccessToken?.userId as number
       const result = await guestCreateOrdersController(guestId, request.body)
       fastify.io.to(ManagerRoom).emit('new-order', result)
+      fastify.io.to(ManagerRoom).emit('count-order', {
+        message: 'Cập nhật sl đơn hàng'
+      })
       reply.send({
         message: 'Đặt món thành công',
         data: result as GuestCreateOrdersResType['data']

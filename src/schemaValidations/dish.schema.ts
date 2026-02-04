@@ -35,6 +35,19 @@ export const UpdateDishBody = CreateDishBody.extend({
 })
 export type UpdateDishBodyType = z.TypeOf<typeof UpdateDishBody>
 
+export const dishIngredientSchema = z.object({
+  id: z.number(),
+  dishId: z.number(),
+  ingredientId: z.number(),
+  ingredient: IngredientSchema,
+  quantity: z.string(),
+  unit: z.string(),
+  isOptional: z.boolean(),
+  isMain: z.boolean(),
+  createdAt: z.date(),
+  updatedAt: z.date()
+})
+
 export const DishSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -53,6 +66,8 @@ export const DishSchema = z.object({
   preparationTime: z.number(),
   searchKeywords: z.string(),
   popularity: z.number(),
+
+  ingredients: z.array(z.string()).nullable().optional(),
 
   createdAt: z.date(),
   updatedAt: z.date()
@@ -97,19 +112,6 @@ export const DishListWithPaginationRes = z.object({
 })
 
 export type DishListWithPaginationResType = z.TypeOf<typeof DishListWithPaginationRes>
-
-export const dishIngredientSchema = z.object({
-  id: z.number(),
-  dishId: z.number(),
-  ingredientId: z.number(),
-  ingredient: IngredientSchema,
-  quantity: z.string(),
-  unit: z.string(),
-  isOptional: z.boolean(),
-  isMain: z.boolean(),
-  createdAt: z.date(),
-  updatedAt: z.date()
-})
 
 export const DishIngredientRes = z.object({
   data: dishIngredientSchema,

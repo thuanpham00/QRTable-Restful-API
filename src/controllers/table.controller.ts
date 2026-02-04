@@ -102,6 +102,8 @@ export const updateTable = (number: number, data: UpdateTableBodyType) => {
           data: {
             status: data.status,
             capacity: data.capacity,
+            notes: data.notes,
+            typeQR: data.typeQR,
             token
           }
         }),
@@ -124,7 +126,9 @@ export const updateTable = (number: number, data: UpdateTableBodyType) => {
     },
     data: {
       status: data.status,
-      capacity: data.capacity
+      capacity: data.capacity,
+      notes: data.notes,
+      typeQR: data.typeQR
     }
   })
 }

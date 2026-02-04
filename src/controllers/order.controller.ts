@@ -280,3 +280,18 @@ export const updateOrderController = async (
     socketId: socketRecord?.socketId
   }
 }
+
+export const getCountOrderTodayController = async ({ fromDate, toDate }: { fromDate?: Date; toDate?: Date }) => {
+  const guestCallList = await prisma.order.count({
+    where: {
+      status: {
+        not: OrderStatus.Paid
+      },
+      createdAt: {
+        gte: fromDate,
+        lte: toDate
+      }
+    }
+  })
+  return guestCallList
+}

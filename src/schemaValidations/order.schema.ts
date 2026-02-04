@@ -1,4 +1,4 @@
-import { DishStatusValues, MenuItemStatusValues, OrderStatusValues } from '@/constants/type'
+import { DishStatusValues, MenuItemStatusValues, OrderModeTypeValues, OrderStatusValues } from '@/constants/type'
 import { AccountSchema } from '@/schemaValidations/account.schema'
 import { TableSchema } from '@/schemaValidations/table.schema'
 import z from 'zod'
@@ -33,6 +33,8 @@ export const OrderSchema = z.object({
   quantity: z.number(),
   orderHandlerId: z.number().nullable(),
   orderHandler: AccountSchema.nullable(),
+
+  orderMode: z.enum(OrderModeTypeValues),
   status: z.enum(OrderStatusValues),
   createdAt: z.date(),
   updatedAt: z.date()
