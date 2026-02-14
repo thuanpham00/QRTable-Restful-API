@@ -7,8 +7,14 @@ export const createOrdersController = async (orderHandlerId: number, body: Creat
   const guest = await prisma.guest.findUniqueOrThrow({
     where: {
       id: guestId
+    },
+    select: {
+      id: true,
+      tableNumber: true,
+      tableSessionId: true
     }
   })
+
   if (guest.tableNumber === null) {
     throw new Error('Bàn gắn liền với khách hàng này đã bị xóa, vui lòng chọn khách hàng khác!')
   }
@@ -22,80 +28,99 @@ export const createOrdersController = async (orderHandlerId: number, body: Creat
   }
 
   const [ordersRecord, socketRecord] = await Promise.all([
-    prisma.$transaction(async (tx) => {
-      const ordersRecord = await Promise.all(
-        orders.map(async (order) => {
-          const menuItem = await tx.menuItem.findUniqueOrThrow({
-            where: {
-              id: order.menuItemId
-            },
-            include: {
-              dish: true
-            }
-          })
+    prisma.$transaction(
+      async (tx) => {
+        const ordersRecord = await Promise.all(
+          orders.map(async (order) => {
+            const menuItem = await tx.menuItem.findUniqueOrThrow({
+              where: {
+                id: order.menuItemId
+              },
+              include: {
+                dish: true
+              }
+            })
 
-          // Kiểm tra trạng thái MenuItem
-          if (menuItem.status === MenuItemStatus.HIDDEN) {
-            throw new Error(`Món ăn không khả dụng trong menu`)
-          }
-          if (menuItem.status === MenuItemStatus.OUT_OF_STOCK) {
-            throw new Error(`Món ăn tạm thời hết hàng`)
-          }
+            // Kiểm tra trạng thái MenuItem
+            if (menuItem.status === MenuItemStatus.HIDDEN) {
+              throw new Error(`Món ăn không khả dụng trong menu`)
+            }
+            if (menuItem.status === MenuItemStatus.OUT_OF_STOCK) {
+              throw new Error(`Món ăn tạm thời hết hàng`)
+            }
 
-          // Kiểm tra trạng thái Dish gốc
-          const dish = menuItem.dish
-          if (dish.status === DishStatus.Discontinued) {
-            throw new Error(`Món ${dish.name} đã ngừng phục vụ`)
-          }
-          // +1 lần popularity của món ăn
-          await tx.dish.update({
-            where: { id: dish.id },
-            data: {
-              popularity: { increment: 1 }
+            // Kiểm tra trạng thái Dish gốc
+            const dish = menuItem.dish
+            if (dish.status === DishStatus.Discontinued) {
+              throw new Error(`Món ${dish.name} đã ngừng phục vụ`)
+            }
+            // +1 lần popularity của món ăn
+            await tx.dish.update({
+              where: { id: dish.id },
+              data: {
+                popularity: { increment: 1 }
+              }
+            })
+            const dishSnapshot = await tx.dishSnapshot.create({
+              data: {
+                description: dish.description,
+                image: dish.image,
+                name: dish.name,
+                price: menuItem.price,
+                menuItemId: menuItem.id,
+                status: menuItem.status
+              }
+            })
+            const orderRecord = await tx.order.create({
+              data: {
+                dishSnapshotId: dishSnapshot.id,
+                guestId,
+                quantity: order.quantity,
+                tableNumber: guest.tableNumber,
+                orderHandlerId,
+                status: OrderStatus.Pending,
+                orderMode: body.orderMode,
+                tableSessionId: guest.tableSessionId
+              },
+              include: {
+                dishSnapshot: true,
+                guest: true,
+                orderHandler: true
+              }
+            })
+            type OrderRecord = typeof orderRecord
+            return orderRecord as OrderRecord & {
+              status: (typeof OrderStatus)[keyof typeof OrderStatus]
+              dishSnapshot: OrderRecord['dishSnapshot'] & {
+                status: (typeof DishStatus)[keyof typeof DishStatus]
+              }
             }
           })
-          const dishSnapshot = await tx.dishSnapshot.create({
-            data: {
-              description: dish.description,
-              image: dish.image,
-              name: dish.name,
-              price: menuItem.price,
-              menuItemId: menuItem.id,
-              status: menuItem.status
-            }
-          })
-          const orderRecord = await tx.order.create({
-            data: {
-              dishSnapshotId: dishSnapshot.id,
-              guestId,
-              quantity: order.quantity,
-              tableNumber: guest.tableNumber,
-              orderHandlerId,
-              status: OrderStatus.Pending
-            },
-            include: {
-              dishSnapshot: true,
-              guest: true,
-              orderHandler: true
-            }
-          })
-          type OrderRecord = typeof orderRecord
-          return orderRecord as OrderRecord & {
-            status: (typeof OrderStatus)[keyof typeof OrderStatus]
-            dishSnapshot: OrderRecord['dishSnapshot'] & {
-              status: (typeof DishStatus)[keyof typeof DishStatus]
-            }
-          }
-        })
-      )
-      return ordersRecord
-    }),
+        )
+
+        return ordersRecord
+      },
+      {
+        maxWait: 10000,
+        timeout: 15000
+      }
+    ),
     prisma.socket.findUnique({
       where: {
         guestId: body.guestId
       }
     })
   ])
+
+  await prisma.tableSession.update({
+    where: {
+      id: guest.tableSessionId!
+    },
+    data: {
+      orderCount: { increment: ordersRecord.length }
+    }
+  })
+
   return {
     orders: ordersRecord,
     socketId: socketRecord?.socketId
@@ -122,19 +147,29 @@ export const getOrdersController = async ({ fromDate, toDate }: { fromDate?: Dat
   return orders
 }
 
-// Controller thanh toán các hóa đơn dựa trên guestId
-export const payOrdersController = async ({ guestId, orderHandlerId }: { guestId: number; orderHandlerId: number }) => {
+// Controller thanh toán các hóa đơn dựa trên tableNumber (thanh toán cả bàn)
+export const payOrdersByTableController = async ({
+  tableNumber,
+  orderHandlerId
+}: {
+  tableNumber: number
+  orderHandlerId: number
+}) => {
   const orders = await prisma.order.findMany({
     where: {
-      guestId,
+      tableNumber,
       status: {
         in: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Delivered]
       }
+    },
+    include: {
+      guest: true
     }
   })
   if (orders.length === 0) {
-    throw new Error('Không có hóa đơn nào cần thanh toán')
+    throw new Error('Không có hóa đơn nào cần thanh toán cho bàn này')
   }
+
   await prisma.$transaction(async (tx) => {
     const orderIds = orders.map((order) => order.id)
     const updatedOrders = await tx.order.updateMany({
@@ -150,7 +185,10 @@ export const payOrdersController = async ({ guestId, orderHandlerId }: { guestId
     })
     return updatedOrders
   })
-  const [ordersResult, sockerRecord] = await Promise.all([
+
+  // Lấy tất cả socketId của các guest ở bàn này
+  const guestIds = [...new Set(orders.map((order) => order.guestId).filter((id) => id !== null))] as number[]
+  const [ordersResult, socketRecords] = await Promise.all([
     prisma.order.findMany({
       where: {
         id: {
@@ -166,15 +204,18 @@ export const payOrdersController = async ({ guestId, orderHandlerId }: { guestId
         createdAt: 'desc'
       }
     }),
-    prisma.socket.findUnique({
+    prisma.socket.findMany({
       where: {
-        guestId
+        guestId: {
+          in: guestIds
+        }
       }
     })
   ])
+
   return {
     orders: ordersResult,
-    socketId: sockerRecord?.socketId
+    socketIds: socketRecords.map((record) => record.socketId)
   }
 }
 
@@ -285,7 +326,7 @@ export const getCountOrderTodayController = async ({ fromDate, toDate }: { fromD
   const guestCallList = await prisma.order.count({
     where: {
       status: {
-        not: OrderStatus.Paid
+        in: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Delivered]
       },
       createdAt: {
         gte: fromDate,

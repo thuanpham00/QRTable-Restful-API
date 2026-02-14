@@ -94,9 +94,20 @@ export const PayGuestOrdersRes = GetOrdersRes
 
 export type PayGuestOrdersResType = z.TypeOf<typeof PayGuestOrdersRes>
 
+export const PayTableOrdersBody = z.object({
+  tableNumber: z.number()
+})
+
+export type PayTableOrdersBodyType = z.TypeOf<typeof PayTableOrdersBody>
+
+export const PayTableOrdersRes = GetOrdersRes
+
+export type PayTableOrdersResType = z.TypeOf<typeof PayTableOrdersRes>
+
 export const CreateOrdersBody = z
   .object({
     guestId: z.number(),
+    orderMode: z.enum(OrderModeTypeValues),
     orders: z.array(
       z.object({
         menuItemId: z.number(),

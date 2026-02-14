@@ -27,6 +27,9 @@ import categoryRoutes from '@/routes/category.route'
 import menusRoutes from '@/routes/menu.route'
 import ingredientRoutes from '@/routes/ingredient.route'
 import guestCallRoutes from '@/routes/guest-call.route'
+import paymentRoutes from '@/routes/payment.route'
+import sepayRoutes from '@/routes/seepay.route'
+import autoRotateTableTokenJob from '@/jobs/autoRotateTableTokenJob'
 
 const fastify = Fastify({
   logger: false
@@ -36,7 +39,9 @@ const fastify = Fastify({
 const start = async () => {
   try {
     createFolder(path.resolve(envConfig.UPLOAD_FOLDER))
-    autoRemoveRefreshTokenJob()
+    autoRemoveRefreshTokenJob() // tự động xóa refresh token sau mỗi giờ
+    autoRotateTableTokenJob() // tự động changeToken cho bàn sau 10 phút 1 lần
+
     const whitelist = ['*']
     fastify.register(cors, {
       origin: whitelist, // Cho phép tất cả các domain gọi API
@@ -101,6 +106,12 @@ const start = async () => {
     })
     fastify.register(guestCallRoutes, {
       prefix: '/guest-calls'
+    })
+    fastify.register(paymentRoutes, {
+      prefix: '/payments'
+    })
+    fastify.register(sepayRoutes, {
+      prefix: '/sepay'
     })
     await initOwnerAccount()
     await fastify.listen({

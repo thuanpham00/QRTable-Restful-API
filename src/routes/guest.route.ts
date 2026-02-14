@@ -44,6 +44,7 @@ export default async function guestRoutes(fastify: FastifyInstance, options: Fas
     async (request, reply) => {
       const { body } = request
       const result = await guestLoginController(body)
+      fastify.io.to(ManagerRoom).emit('update-status-table', result) // cập nhật trạng thái bàn
       reply.send({
         message: 'Đăng nhập thành công',
         data: {
@@ -73,7 +74,7 @@ export default async function guestRoutes(fastify: FastifyInstance, options: Fas
       preValidation: fastify.auth([requireLoginedHook])
     },
     async (request, reply) => {
-      const message = await guestLogoutController(request.decodedAccessToken?.userId as number)
+      const message = await guestLogoutController(request.decodedAccessToken?.userId as number, fastify.io)
       reply.send({
         message
       })

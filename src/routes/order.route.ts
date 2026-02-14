@@ -4,7 +4,7 @@ import {
   getCountOrderTodayController,
   getOrderDetailController,
   getOrdersController,
-  payOrdersController,
+  payOrdersByTableController,
   updateOrderController
 } from '@/controllers/order.controller'
 import { requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
@@ -22,10 +22,10 @@ import {
   GetOrdersResType,
   OrderParam,
   OrderParamType,
-  PayGuestOrdersBody,
-  PayGuestOrdersBodyType,
-  PayGuestOrdersRes,
-  PayGuestOrdersResType,
+  PayTableOrdersBody,
+  PayTableOrdersBodyType,
+  PayTableOrdersRes,
+  PayTableOrdersResType,
   UpdateOrderBody,
   UpdateOrderBodyType,
   UpdateOrderRes,
@@ -60,6 +60,9 @@ export default async function orderRoutes(fastify: FastifyInstance, options: Fas
       } else {
         fastify.io.to(ManagerRoom).emit('new-order', orders)
       }
+      fastify.io.to(ManagerRoom).emit('count-order', {
+        message: 'Cập nhật sl đơn hàng'
+      })
       reply.send({
         message: `Tạo thành công ${orders.length} đơn hàng cho khách hàng`,
         data: orders as CreateOrdersResType['data']
@@ -124,9 +127,9 @@ export default async function orderRoutes(fastify: FastifyInstance, options: Fas
         orderHandlerId: request.decodedAccessToken?.userId as number
       })
       if (result.socketId) {
-        fastify.io.to(result.socketId).to(ManagerRoom).emit('update-order', result.order)
+        fastify.io.to(result.socketId).to(ManagerRoom).emit('update-order', result.order) // dành cho đơn hàng tạo từ khách
       } else {
-        fastify.io.to(ManagerRoom).emit('update-order', result.order)
+        fastify.io.to(ManagerRoom).emit('update-order', result.order) // dành cho đơn hàng tạo từ nhân viên
       }
       if (request.body.status === OrderStatus.Paid) {
         fastify.io.to(ManagerRoom).emit('count-order', {
@@ -140,54 +143,28 @@ export default async function orderRoutes(fastify: FastifyInstance, options: Fas
     }
   )
 
-  fastify.post<{ Body: PayGuestOrdersBodyType; Reply: PayGuestOrdersResType }>(
-    '/pay',
+  fastify.get<{
+    Reply: GuestCallCountResType
+    Querystring: GetOrdersQueryParamsType
+  }>(
+    '/count-order-today',
     {
       schema: {
         response: {
-          200: PayGuestOrdersRes
+          200: GuestCallCountRes
         },
-        body: PayGuestOrdersBody
+        querystring: GetOrdersQueryParams
       }
     },
     async (request, reply) => {
-      const result = await payOrdersController({
-        guestId: request.body.guestId,
-        orderHandlerId: request.decodedAccessToken?.userId as number
+      const result = await getCountOrderTodayController({
+        fromDate: request.query.fromDate,
+        toDate: request.query.toDate
       })
-      if (result.socketId) {
-        fastify.io.to(result.socketId).to(ManagerRoom).emit('payment', result.orders)
-      } else {
-        fastify.io.to(ManagerRoom).emit('payment', result.orders)
-      }
       reply.send({
-        message: `Thanh toán thành công ${result.orders.length} đơn`,
-        data: result.orders as PayGuestOrdersResType['data']
+        message: 'Lấy số lượng đơn hàng chưa thanh toán thành công',
+        data: result
       })
     }
-  ),
-    fastify.get<{
-      Reply: GuestCallCountResType
-      Querystring: GetOrdersQueryParamsType
-    }>(
-      '/count-order-today',
-      {
-        schema: {
-          response: {
-            200: GuestCallCountRes
-          },
-          querystring: GetOrdersQueryParams
-        }
-      },
-      async (request, reply) => {
-        const result = await getCountOrderTodayController({
-          fromDate: request.query.fromDate,
-          toDate: request.query.toDate
-        })
-        reply.send({
-          message: 'Lấy số lượng đơn hàng chưa thanh toán thành công',
-          data: result
-        })
-      }
-    )
+  )
 }

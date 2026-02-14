@@ -16,6 +16,8 @@ Table Account {
   refreshToken RefreshToken [not null]
   sockets Socket [not null]
   guestCalls GuestCall [not null]
+  paymentsCreated Payment [not null]
+  paymentGroupsCreated PaymentGroup [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
@@ -73,6 +75,10 @@ Table Order {
   quantity Int [not null]
   orderHandler Account
   orderHandlerId Int
+  paymentId Int
+  payment Payment
+  tableSessionId Int
+  tableSession TableSession
   orderMode String [not null, default: 'DINE_IN']
   status String [not null, default: 'Pending']
   createdAt DateTime [default: `now()`, not null]
@@ -85,10 +91,31 @@ Table Table {
   orders Order [not null]
   guests Guest [not null]
   guestCalls GuestCall [not null]
+  payments Payment [not null]
+  paymentGroups PaymentGroup [not null]
+  tableSessions TableSession [not null]
   status String [not null, default: 'Available']
   notes String
   typeQR String [default: 'DINE_IN']
   token String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
+Table TableSession {
+  id Int [pk, increment]
+  tableNumber Int [not null]
+  startTime DateTime [default: `now()`, not null]
+  endTime DateTime
+  status String [not null, default: 'Active']
+  totalRevenue Int [not null, default: 0]
+  guestCount Int [not null, default: 0]
+  orderCount Int [not null, default: 0]
+  note String
+  table Table [not null]
+  guests Guest [not null]
+  orders Order [not null]
+  paymentGroups PaymentGroup [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
@@ -103,9 +130,12 @@ Table Guest {
   chatHistory ChatHistory [not null]
   guestCall GuestCall [not null]
   orders Order [not null]
+  payments Payment [not null]
   refreshToken String
   refreshTokenExpiresAt DateTime
   sockets Socket [not null]
+  tableSessionId Int
+  tableSession TableSession
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
@@ -217,6 +247,79 @@ Table GuestCall {
   updatedAt DateTime [not null]
 }
 
+Table PaymentGroup {
+  id Int [pk, increment]
+  tableNumber Int [not null]
+  totalAmount Int [not null]
+  paymentMethod String [not null]
+  status String [not null]
+  note String
+  createdById Int [not null]
+  sepayTransactionId String
+  sepayReferenceCode String
+  sepayGateway String
+  sepayTransactionDate DateTime
+  sepayContent String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  table Table [not null]
+  createdBy Account [not null]
+  payments Payment [not null]
+  sepayTransaction SepayTransaction
+  tableSessionId Int
+  tableSession TableSession
+}
+
+Table Payment {
+  id Int [pk, increment]
+  paymentMethod String [not null, default: 'CASH']
+  totalAmount Int [not null]
+  status String [not null, default: 'Pending']
+  sepayTransactionId Int
+  sepayReferenceCode String
+  sepayGateway String
+  sepayTransactionDate DateTime
+  sepayContent String
+  guestId Int
+  guest Guest
+  tableNumber Int
+  table Table
+  orders Order [not null]
+  sepayTransaction SepayTransaction
+  paymentGroupId Int
+  paymentGroup PaymentGroup
+  note String
+  createdById Int
+  createdBy Account
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
+Table SepayTransaction {
+  id Int [pk, increment]
+  sepayId Int [unique, not null]
+  gateway String [not null]
+  transactionDate DateTime [not null]
+  accountNumber String [not null]
+  transferType String [not null]
+  transferAmount Int [not null]
+  accumulated Int
+  code String
+  content String [not null]
+  referenceCode String
+  subAccount String
+  description String
+  paymentId Int [unique]
+  payment Payment
+  paymentGroupId Int [unique]
+  paymentGroup PaymentGroup
+  processed Boolean [not null, default: false]
+  processingError String
+  processedAt DateTime
+  retryCount Int [not null, default: 0]
+  createdAt DateTime [default: `now()`, not null]
+}
+
 Ref: Account.ownerId > Account.id
 
 Ref: RefreshToken.accountId > Account.id [delete: Cascade]
@@ -233,7 +336,15 @@ Ref: Order.dishSnapshotId - DishSnapshot.id [delete: Cascade]
 
 Ref: Order.orderHandlerId > Account.id [delete: Set Null]
 
+Ref: Order.paymentId > Payment.id [delete: Set Null]
+
+Ref: Order.tableSessionId > TableSession.id [delete: Set Null]
+
+Ref: TableSession.tableNumber > Table.number
+
 Ref: Guest.tableNumber > Table.number [delete: Set Null]
+
+Ref: Guest.tableSessionId > TableSession.id [delete: Set Null]
 
 Ref: Socket.accountId > Account.id [delete: Set Null]
 
@@ -254,3 +365,21 @@ Ref: GuestCall.guestId > Guest.id [delete: Set Null]
 Ref: GuestCall.tableNumber > Table.number [delete: Set Null]
 
 Ref: GuestCall.accountId > Account.id [delete: Set Null]
+
+Ref: PaymentGroup.tableNumber > Table.number
+
+Ref: PaymentGroup.createdById > Account.id
+
+Ref: PaymentGroup.tableSessionId > TableSession.id [delete: Set Null]
+
+Ref: Payment.guestId > Guest.id [delete: Set Null]
+
+Ref: Payment.tableNumber > Table.number [delete: Set Null]
+
+Ref: Payment.paymentGroupId > PaymentGroup.id [delete: Set Null]
+
+Ref: Payment.createdById > Account.id [delete: Set Null]
+
+Ref: SepayTransaction.paymentId - Payment.id [delete: Set Null]
+
+Ref: SepayTransaction.paymentGroupId - PaymentGroup.id [delete: Set Null]

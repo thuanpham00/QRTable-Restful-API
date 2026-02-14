@@ -39,7 +39,13 @@ const configSchema = z.object({
   DOCKER: z.enum(['true', 'false']).transform((val) => val === 'true'),
   PRODUCTION_URL: z.string(),
   SERVER_TIMEZONE: z.string(),
-  PAUSE_SOME_ENDPOINTS: z.enum(['true', 'false']).transform((val) => val === 'true')
+  PAUSE_SOME_ENDPOINTS: z.enum(['true', 'false']).transform((val) => val === 'true'),
+
+  SEPAY_WEBHOOK_SECRET: z.string().optional(),
+  SEPAY_BANK_CODE: z.string().default('MBBank'),
+  SEPAY_ACCOUNT_NUMBER: z.string(),
+  SEPAY_ACCOUNT_NAME: z.string().default('KITCHEN SMART'),
+  SEPAY_PAYMENT_PREFIX: z.string().default('KS')
 })
 
 const configServer = configSchema.safeParse(process.env)

@@ -27,6 +27,9 @@ model Account {
   refreshToken RefreshToken[]
   sockets      Socket[]
   guestCalls   GuestCall[]
+
+  paymentsCreated Payment[]
+  paymentGroupsCreated PaymentGroup[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -88,6 +91,12 @@ model Order {
   orderHandler   Account?     @relation(fields: [orderHandlerId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   orderHandlerId Int?
 
+  paymentId      Int?
+  payment        Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  tableSessionId  Int?
+  tableSession    TableSession? @relation(fields: [tableSessionId], references: [id], onDelete: SetNull)
+
   orderMode      String       @default("DINE_IN")
   status         String       @default("Pending")
   createdAt      DateTime     @default(now())
@@ -100,12 +109,51 @@ model Table {
   orders    Order[]
   guests    Guest[]
   guestCalls GuestCall[]
+  payments Payment[]
+  paymentGroups PaymentGroup[]
+
+  tableSessions   TableSession[]
+  
   status    String   @default("Available")
   notes     String?
   typeQR    String?  @default("DINE_IN")
   token     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model TableSession {
+  id              Int       @id @default(autoincrement())
+  tableNumber     Int       
+  
+  // Thời gian phiên
+  startTime       DateTime  @default(now())
+  endTime         DateTime? // null = đang active
+  
+  // Trạng thái
+  status          String    @default("Active") // Active, Completed, Cancelled
+  
+  // Thống kê
+  totalRevenue    Int       @default(0)
+  guestCount      Int       @default(0)
+  orderCount      Int       @default(0)
+  
+  // Metadata
+  note            String?
+  
+  // Relations
+  table           Table     @relation(fields: [tableNumber], references: [number])
+  guests          Guest[]   // Guests trong phiên này
+  orders          Order[]   // Orders trong phiên này
+  paymentGroups   PaymentGroup[] // Payments trong phiên này
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([tableNumber])
+  @@index([status])
+  @@index([startTime])
+  @@index([endTime])
 }
 
 model Guest {
@@ -120,9 +168,14 @@ model Guest {
   guestCall             GuestCall[]   // Relation
 
   orders                Order[]
+  payments              Payment[]
   refreshToken          String?
   refreshTokenExpiresAt DateTime?
   sockets               Socket[]
+
+  tableSessionId  Int?
+  tableSession    TableSession? @relation(fields: [tableSessionId], references: [id], onDelete: SetNull)
+
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }
@@ -241,4 +294,115 @@ model GuestCall {
   @@index([tableNumber])
   @@index([accountId])
   @@index([createdAt])
+}
+
+model PaymentGroup {
+  id              Int       @id @default(autoincrement())
+  tableNumber     Int
+  totalAmount     Int
+  paymentMethod   String    // "CASH" | "SEPAY"
+  status          String    // "Pending" | "Paid" | "Cancelled"
+  note            String?
+  createdById     Int
+
+  sepayTransactionId    String?   // ID giao dịch từ SePay
+  sepayReferenceCode    String?   // Mã tham chiếu ngân hàng
+  sepayGateway          String?   // Tên ngân hàng
+  sepayTransactionDate  DateTime? // Thời gian giao dịch
+  sepayContent          String?   // Nội dung chuyển khoản
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  table           Table     @relation(fields: [tableNumber], references: [number])
+  createdBy       Account   @relation(fields: [createdById], references: [id])
+  payments        Payment[] // 1 group có nhiều payments
+  sepayTransaction SepayTransaction?
+
+  tableSessionId  Int?
+  tableSession    TableSession? @relation(fields: [tableSessionId], references: [id], onDelete: SetNull)
+  
+  @@index([tableNumber])
+  @@index([status])
+  @@index([tableSessionId])
+}
+
+model Payment {
+  id             Int           @id @default(autoincrement())
+  
+  // Thông tin thanh toán
+  paymentMethod  String        @default("CASH") // CASH, BANK_TRANSFER, SEPAY
+  totalAmount    Int           // Tổng tiền thực tế thanh toán
+  status         String        @default("Pending") // Pending, Paid, Failed, Cancelled
+  
+  // Thông tin SePay
+  sepayTransactionId    Int?      // ID giao dịch từ SePay
+  sepayReferenceCode    String?   // Mã tham chiếu ngân hàng
+  sepayGateway          String?   // Tên ngân hàng (VCB, MBBank...)
+  sepayTransactionDate  DateTime? // Thời gian giao dịch
+  sepayContent          String?   // Nội dung chuyển khoản
+  
+  // Scope thanh toán
+  guestId        Int?          
+  guest          Guest?        @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  tableNumber    Int?          
+  table          Table?        @relation(fields: [tableNumber], references: [number], onDelete: SetNull)
+  
+  // Quan hệ với Orders
+  orders         Order[]       
+  sepayTransaction SepayTransaction?
+
+  paymentGroupId Int?   
+  paymentGroup    PaymentGroup? @relation(fields: [paymentGroupId], references: [id], onDelete: SetNull)
+
+  // Metadata
+  note           String?       
+  createdById    Int?
+  createdBy      Account?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  
+  @@index([guestId])
+  @@index([tableNumber])
+  @@index([sepayTransactionId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Bảng mới: Lưu log webhook từ SePay
+model SepayTransaction {
+  id                  Int       @id @default(autoincrement())
+  sepayId             Int       @unique // ID từ SePay
+  gateway             String    // Ngân hàng
+  transactionDate     DateTime  // Thời gian giao dịch
+  accountNumber       String    // Số tài khoản
+  transferType        String    // in/out
+  transferAmount      Int       // Số tiền
+  accumulated         Int?      // Số dư
+  code                String?   // Mã code
+  content             String    // Nội dung CK
+  referenceCode       String?   // Mã tham chiếu
+  subAccount          String?   
+  description         String?   // Body webhook
+  
+  // Liên kết với Payment
+  paymentId           Int?      @unique
+  payment             Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  paymentGroupId      Int?      @unique
+  paymentGroup        PaymentGroup?  @relation(fields: [paymentGroupId], references: [id], onDelete: SetNull)
+  
+  processed           Boolean   @default(false) // Đã xử lý chưa
+  
+  processingError     String?   // Lưu lỗi nếu xử lý thất bại
+  processedAt         DateTime? // Thời điểm xử lý
+  retryCount          Int       @default(0) // Số lần retry
+  
+  createdAt           DateTime  @default(now())
+  
+  @@index([sepayId])
+  @@index([content])
+  @@index([processed])
+  @@index([transactionDate]) // ✅ THÊM: Index cho query theo thời gian
 }
