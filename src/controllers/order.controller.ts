@@ -11,7 +11,9 @@ export const createOrdersController = async (orderHandlerId: number, body: Creat
     select: {
       id: true,
       tableNumber: true,
-      tableSessionId: true
+      tableSessionId: true,
+      refreshToken: true,
+      refreshTokenExpiresAt: true
     }
   })
 
@@ -25,6 +27,16 @@ export const createOrdersController = async (orderHandlerId: number, body: Creat
   })
   if (table.status === TableStatus.Hidden) {
     throw new Error(`Bàn ${table.number} gắn liền với khách hàng đã bị ẩn, vui lòng chọn khách hàng khác!`)
+  }
+
+  // dành cho khách ko login thì tại bước này update trạng thái table
+  if (guest.refreshToken === null || guest.refreshTokenExpiresAt === null) {
+    await prisma.table.update({
+      where: { number: guest.tableNumber },
+      data: {
+        status: TableStatus.Serving
+      }
+    })
   }
 
   const [ordersRecord, socketRecord] = await Promise.all([

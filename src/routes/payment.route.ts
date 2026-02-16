@@ -44,7 +44,7 @@ export default async function paymentRoutes(fastify: FastifyInstance, options: F
     },
     async (request, reply) => {
       const accountId = request.decodedAccessToken?.userId as number
-      const { responseData, socketId, orders } = await createPayment(request.body, accountId)
+      const { responseData, socketId, orders } = await createPayment(request.body, accountId, fastify.io)
       if (socketId && request.body.paymentMethod === 'CASH') {
         fastify.io.to(socketId).to(ManagerRoom).emit('payment', orders)
       } else {

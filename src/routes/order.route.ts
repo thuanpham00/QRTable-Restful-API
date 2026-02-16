@@ -63,6 +63,7 @@ export default async function orderRoutes(fastify: FastifyInstance, options: Fas
       fastify.io.to(ManagerRoom).emit('count-order', {
         message: 'Cập nhật sl đơn hàng'
       })
+      fastify.io.to(ManagerRoom).emit('update-status-table') // cập nhật trạng thái bàn
       reply.send({
         message: `Tạo thành công ${orders.length} đơn hàng cho khách hàng`,
         data: orders as CreateOrdersResType['data']
@@ -131,7 +132,7 @@ export default async function orderRoutes(fastify: FastifyInstance, options: Fas
       } else {
         fastify.io.to(ManagerRoom).emit('update-order', result.order) // dành cho đơn hàng tạo từ nhân viên
       }
-      if (request.body.status === OrderStatus.Paid) {
+      if (request.body.status === OrderStatus.Paid || request.body.status === OrderStatus.Rejected) {
         fastify.io.to(ManagerRoom).emit('count-order', {
           message: 'Cập nhật sl đơn hàng'
         })

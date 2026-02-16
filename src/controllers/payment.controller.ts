@@ -10,7 +10,7 @@ import { EntityError } from '@/utils/errors'
 import { ManagerRoom, OrderStatus } from '@/constants/type'
 
 // Controller: Thanh toán cả bàn (sử dụng PaymentGroup)
-export const createPaymentForTable = async (body: CreatePaymentByTableBodyType, accountId: number) => {
+export const createPaymentForTable = async (body: CreatePaymentByTableBodyType, accountId: number, io?: any) => {
   const { tableNumber, paymentMethod, guestIds } = body
 
   // 1. Check existing PaymentGroup nếu là SEPAY (tránh tạo group mới mỗi lần mở modal QR)
@@ -112,6 +112,7 @@ export const createPaymentForTable = async (body: CreatePaymentByTableBodyType, 
   }
 
   // 3. Tạo PaymentGroup + Payments trong transaction
+  let shouldUpdateTableStatus = false
   const result = await prisma.$transaction(async (tx) => {
     // 3.1. Tạo PaymentGroup
     const paymentGroup = await tx.paymentGroup.create({
@@ -176,10 +177,60 @@ export const createPaymentForTable = async (body: CreatePaymentByTableBodyType, 
           totalRevenue: { increment: totalAmount }
         }
       })
+
+      // Check guests không login (refreshToken null) - đã thanh toán xong
+      const guestsInfo = await tx.guest.findMany({
+        where: { id: { in: paymentsData.map((p) => p.guestId) } },
+        select: { id: true, refreshToken: true, refreshTokenExpiresAt: true }
+      })
+
+      const loggedOutGuestsCount = guestsInfo.filter(
+        (g) => g.refreshToken === null && g.refreshTokenExpiresAt === null
+      ).length
+
+      if (loggedOutGuestsCount > 0) {
+        const currentSession = await tx.tableSession.findUnique({
+          where: { id: tableSessionId }
+        })
+
+        if (currentSession) {
+          const remainingGuests = currentSession.guestCount - loggedOutGuestsCount
+
+          if (remainingGuests <= 0) {
+            // Tất cả guests đã logout → End session
+            await tx.tableSession.update({
+              where: { id: tableSessionId },
+              data: {
+                endTime: new Date(),
+                status: 'Completed',
+                guestCount: 0
+              }
+            })
+            await tx.table.update({
+              where: { number: tableNumber },
+              data: { status: 'Available' }
+            })
+            shouldUpdateTableStatus = true
+          } else {
+            // Còn guests khác → Chỉ decrement
+            await tx.tableSession.update({
+              where: { id: tableSessionId },
+              data: {
+                guestCount: { decrement: loggedOutGuestsCount }
+              }
+            })
+          }
+        }
+      }
     }
 
     return { paymentGroup, payments }
   })
+
+  // Emit socket nếu table status đổi
+  if (shouldUpdateTableStatus && io) {
+    io.to(ManagerRoom).emit('update-status-table')
+  }
 
   // 4. Generate response
   const allOrders = result.payments.flatMap((p) => p.orders)
@@ -214,7 +265,7 @@ export const createPaymentForTable = async (body: CreatePaymentByTableBodyType, 
 }
 
 // Controller thanh toán các hóa đơn dựa trên guestId
-export const createPayment = async (body: CreatePaymentBodyType, accountId: number) => {
+export const createPayment = async (body: CreatePaymentBodyType, accountId: number, io: any) => {
   const { guestId, tableNumber, orderIds, totalAmount, paymentMethod, note } = body
 
   // 2.5. Kiểm tra payment đã tồn tại chưa
@@ -336,7 +387,7 @@ export const createPayment = async (body: CreatePaymentBodyType, accountId: numb
     if (paymentMethod === 'CASH' && payment.guestId) {
       const guest = await tx.guest.findUnique({
         where: { id: payment.guestId },
-        select: { tableSessionId: true }
+        select: { tableSessionId: true, refreshToken: true, refreshTokenExpiresAt: true }
       })
       if (guest?.tableSessionId) {
         await tx.tableSession.update({
@@ -345,6 +396,37 @@ export const createPayment = async (body: CreatePaymentBodyType, accountId: numb
             totalRevenue: { increment: totalAmount }
           }
         })
+
+        // dành cho khách không login vào hệ thống
+        if (guest?.refreshToken === null && guest?.refreshTokenExpiresAt === null) {
+          const findTableSession = await tx.tableSession.findUnique({
+            where: { id: guest.tableSessionId }
+          })
+          if (findTableSession?.guestCount === 1) {
+            await Promise.all([
+              tx.tableSession.update({
+                where: { id: guest.tableSessionId },
+                data: {
+                  endTime: new Date(),
+                  status: 'Completed',
+                  guestCount: { decrement: 1 }
+                }
+              }),
+              tx.table.update({
+                where: { number: findTableSession.tableNumber },
+                data: { status: 'Available' }
+              })
+            ])
+            io.to(ManagerRoom).emit('update-status-table') // cập nhật trạng thái bàn
+          } else {
+            await tx.tableSession.update({
+              where: { id: guest.tableSessionId },
+              data: {
+                guestCount: { decrement: 1 }
+              }
+            })
+          }
+        }
       }
     }
   })
@@ -519,6 +601,57 @@ export const handleSepayWebhook = async (webhookData: SepayWebhookBodyType, io?:
         : [])
     ])
 
+    // Check guests không login (refreshToken null) - đã thanh toán xong
+    if (paymentGroup.tableSessionId) {
+      const guestsInfo = await prisma.guest.findMany({
+        where: {
+          id: { in: paymentGroup.payments.map((p) => p.guestId).filter(Boolean) as number[] }
+        },
+        select: { id: true, refreshToken: true, refreshTokenExpiresAt: true }
+      })
+
+      const loggedOutGuestsCount = guestsInfo.filter(
+        (g) => g.refreshToken === null && g.refreshTokenExpiresAt === null
+      ).length
+
+      if (loggedOutGuestsCount > 0) {
+        const currentSession = await prisma.tableSession.findUnique({
+          where: { id: paymentGroup.tableSessionId }
+        })
+
+        if (currentSession) {
+          const remainingGuests = currentSession.guestCount - loggedOutGuestsCount
+
+          if (remainingGuests <= 0) {
+            // Tất cả guests đã logout → End session
+            await prisma.tableSession.update({
+              where: { id: paymentGroup.tableSessionId },
+              data: {
+                endTime: new Date(),
+                status: 'Completed',
+                guestCount: 0
+              }
+            })
+            await prisma.table.update({
+              where: { number: paymentGroup.tableNumber },
+              data: { status: 'Available' }
+            })
+            if (io) {
+              io.to(ManagerRoom).emit('update-status-table')
+            }
+          } else {
+            // Còn guests khác → Chỉ decrement
+            await prisma.tableSession.update({
+              where: { id: paymentGroup.tableSessionId },
+              data: {
+                guestCount: { decrement: loggedOutGuestsCount }
+              }
+            })
+          }
+        }
+      }
+    }
+
     const listGuest = await prisma.payment.findMany({
       where: {
         paymentGroupId: paymentGroup.id
@@ -614,6 +747,39 @@ export const handleSepayWebhook = async (webhookData: SepayWebhookBodyType, io?:
       : [])
   ])
 
+  // dành cho khách không login vào hệ thống
+  if (payment.guest?.refreshToken === null && payment.guest?.refreshTokenExpiresAt === null) {
+    const findTableSession = await prisma.tableSession.findUnique({
+      where: { id: payment.guest.tableSessionId as number }
+    })
+    if (findTableSession?.guestCount === 1) {
+      await Promise.all([
+        prisma.tableSession.update({
+          where: { id: payment.guest.tableSessionId as number },
+          data: {
+            endTime: new Date(),
+            status: 'Completed',
+            guestCount: { decrement: 1 }
+          }
+        }),
+        prisma.table.update({
+          where: { number: findTableSession.tableNumber },
+          data: { status: 'Available' }
+        })
+      ])
+      if (io) {
+        io.to(ManagerRoom).emit('update-status-table') // cập nhật trạng thái bàn
+      }
+    } else {
+      await prisma.tableSession.update({
+        where: { id: payment.guest.tableSessionId as number },
+        data: {
+          guestCount: { decrement: 1 }
+        }
+      })
+    }
+  }
+
   const socketRecord = await prisma.socket.findUnique({
     where: {
       guestId: payment.guestId!
@@ -621,8 +787,15 @@ export const handleSepayWebhook = async (webhookData: SepayWebhookBodyType, io?:
   })
 
   // 8. Gửi thông báo Socket.IO
-  if (io && socketRecord) {
+  if (socketRecord) {
     io.to(ManagerRoom).to(socketRecord.socketId).emit('payment-completed', {
+      paymentId: payment.id,
+      status: 'Paid',
+      amount: payment.totalAmount
+    })
+    io.to(ManagerRoom).emit('count-order')
+  } else {
+    io.to(ManagerRoom).emit('payment-completed', {
       paymentId: payment.id,
       status: 'Paid',
       amount: payment.totalAmount

@@ -280,8 +280,49 @@ export const createGuestController = async (body: CreateGuestBodyType) => {
   if (table.status === TableStatus.Hidden) {
     throw new Error(`Bàn ${table.number} đã bị ẩn, vui lòng chọn bàn khác`)
   }
+
+  if (table.status === TableStatus.Available) {
+    await prisma.table.update({
+      where: { number: body.tableNumber },
+      data: { status: TableStatus.Serving }
+    })
+  }
+
+  // check coi có phiên nào thuộc bàn đó đang mở không, nếu có thì cho khách vào phiên đó, không thì tạo phiên mới rồi cho khách vào
+  const activeSession = await prisma.tableSession.findFirst({
+    where: {
+      tableNumber: body.tableNumber,
+      status: 'Active'
+    }
+  })
+  let sessionId: number
+
+  if (!activeSession) {
+    // Tạo session mới khi là guest đầu tiên
+    const newSession = await prisma.tableSession.create({
+      data: {
+        tableNumber: body.tableNumber,
+        guestCount: 1,
+        status: 'Active'
+      }
+    })
+    sessionId = newSession.id
+  } else {
+    // Join session có sẵn
+    await prisma.tableSession.update({
+      where: { id: activeSession.id },
+      data: {
+        guestCount: { increment: 1 }
+      }
+    })
+    sessionId = activeSession.id
+  }
+
   const guest = await prisma.guest.create({
-    data: body
+    data: {
+      ...body,
+      tableSessionId: sessionId
+    }
   })
   return guest
 }
