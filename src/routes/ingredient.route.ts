@@ -5,7 +5,7 @@ import {
   getIngredientList,
   updateIngredient
 } from '@/controllers/ingredient.controller'
-import { pauseApiHook, requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   CreateIngredientBody,
   CreateIngredientBodyType,
@@ -84,7 +84,7 @@ export default async function ingredientRoutes(fastify: FastifyInstance, options
           200: IngredientRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },
@@ -108,7 +108,7 @@ export default async function ingredientRoutes(fastify: FastifyInstance, options
           200: IngredientRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },
@@ -130,7 +130,7 @@ export default async function ingredientRoutes(fastify: FastifyInstance, options
           200: IngredientRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },

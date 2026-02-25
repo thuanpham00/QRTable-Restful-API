@@ -6,7 +6,7 @@ import {
   getListNameDishCategory,
   updateDishCategory
 } from '@/controllers/dishCategory.controller'
-import { pauseApiHook, requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import { DishParamsType } from '@/schemaValidations/dish.schema'
 import {
   CreateDishCategoryBody,
@@ -87,7 +87,7 @@ export default async function categoryRoutes(fastify: FastifyInstance, options: 
           200: DishCategoryRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },
@@ -115,7 +115,7 @@ export default async function categoryRoutes(fastify: FastifyInstance, options: 
         }
       },
 
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },
@@ -140,7 +140,7 @@ export default async function categoryRoutes(fastify: FastifyInstance, options: 
           200: DishCategoryRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },

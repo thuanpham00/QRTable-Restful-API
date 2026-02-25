@@ -122,6 +122,17 @@ export const updateMenu = (id: number, data: UpdateMenuBodyType) => {
           'Đã có menu khác đang được kích hoạt. Vui lòng tắt kích hoạt menu đó trước khi kích hoạt menu này.'
         )
       }
+      const countMenuItem = await prisma.menuItem.count({
+        where: {
+          menuId: id,
+          status: {
+            not: 'Hidden'
+          }
+        }
+      })
+      if (countMenuItem < 1) {
+        throw new Error('Menu phải có ít nhất 1 món ăn để được kích hoạt!')
+      }
       return prisma.menu.update({
         where: {
           id

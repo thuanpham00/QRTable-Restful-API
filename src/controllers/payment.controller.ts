@@ -848,7 +848,8 @@ export const getPayments = async ({
         guest: { select: { id: true, name: true } },
         table: { select: { number: true } },
         orders: { select: { id: true, quantity: true } },
-        createdBy: { select: { id: true, name: true } }
+        createdBy: { select: { id: true, name: true } },
+        paymentGroup: true
       },
       orderBy: { createdAt: 'desc' },
       skip,
@@ -880,7 +881,8 @@ export const getDetailPayment = async (paymentId: number) => {
       guest: { select: { id: true, name: true } },
       table: { select: { number: true } },
       orders: { select: { id: true, quantity: true } },
-      createdBy: { select: { id: true, name: true } }
+      createdBy: { select: { id: true, name: true } },
+      paymentGroup: true
     }
   })
 

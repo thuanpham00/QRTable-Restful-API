@@ -1,3 +1,4 @@
+import { ManagerRoom, TableStatus } from '@/constants/type'
 import prisma from '@/database'
 import { CreateTableBodyType, TableQueryType, UpdateTableBodyType } from '@/schemaValidations/table.schema'
 import { EntityError, isPrismaClientKnownRequestError } from '@/utils/errors'
@@ -139,4 +140,107 @@ export const deleteTable = (number: number) => {
       number
     }
   })
+}
+
+export const cleanTableController = async ({
+  tableNumber,
+  accountId,
+  io
+}: {
+  tableNumber: number
+  accountId: number
+  io: any
+}) => {
+  // 1. Tìm session Active của bàn
+  const activeSession = await prisma.tableSession.findFirst({
+    where: {
+      tableNumber,
+      status: 'Active'
+    },
+    include: {
+      guests: {
+        where: {
+          refreshToken: { not: null } // Chỉ lấy guests đang login
+        }
+      }
+    }
+  })
+
+  if (!activeSession) {
+    throw new Error('Bàn này không có phiên nào đang hoạt động')
+  }
+
+  // 2. Check có orders chưa thanh toán không
+  const unpaidOrders = await prisma.order.count({
+    where: {
+      tableSessionId: activeSession.id,
+      status: { notIn: ['Paid', 'Rejected'] }
+    }
+  })
+
+  if (unpaidOrders > 0) {
+    throw new Error('Bàn này còn món chưa thanh toán, không thể dọn bàn')
+  }
+
+  // 3. Logout tất cả guests + End session + Set table Available
+  await prisma.$transaction(async (tx) => {
+    // Logout tất cả guests
+    for (const guest of activeSession.guests) {
+      await tx.guest.update({
+        where: { id: guest.id },
+        data: {
+          refreshToken: null,
+          refreshTokenExpiresAt: null
+        }
+      })
+    }
+
+    // End session
+    await tx.tableSession.update({
+      where: { id: activeSession.id },
+      data: {
+        status: 'Completed',
+        endTime: new Date(),
+        guestCount: 0,
+        note: `Dọn bàn bởi nhân viên #${accountId}`
+      }
+    })
+
+    // Set table Available
+    await tx.table.update({
+      where: { number: tableNumber },
+      data: {
+        status: TableStatus.Available
+      }
+    })
+  })
+
+  // 4. Emit socket để disconnect clients
+  if (io) {
+    const socketRecords = await prisma.socket.findMany({
+      where: {
+        guestId: { in: activeSession.guests.map((g) => g.id) }
+      }
+    })
+
+    for (const socket of socketRecords) {
+      io.to(socket.socketId).emit('force-logout', {
+        reason: 'Bàn đã được dọn bởi nhân viên',
+        tableNumber
+      })
+    }
+
+    io.to(ManagerRoom).emit('table-cleaned', {
+      tableNumber,
+      sessionId: activeSession.id,
+      cleanedBy: accountId,
+      guestCount: activeSession.guests.length
+    })
+  }
+
+  return {
+    sessionId: activeSession.id,
+    guestsLoggedOut: activeSession.guests.length,
+    tableNumber
+  }
 }

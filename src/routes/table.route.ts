@@ -1,6 +1,18 @@
-import { createTable, deleteTable, getTableDetail, getTableList, updateTable } from '@/controllers/table.controller'
+import {
+  cleanTableController,
+  createTable,
+  deleteTable,
+  getTableDetail,
+  getTableList,
+  updateTable
+} from '@/controllers/table.controller'
+import { getListHistoryTableSession } from '@/controllers/tableSession.controller'
 import { pauseApiHook, requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
+  CleanTableBody,
+  CleanTableBodyType,
+  CleanTableRes,
+  CleanTableResType,
   CreateTableBody,
   CreateTableBodyType,
   TableListRes,
@@ -14,6 +26,11 @@ import {
   UpdateTableBody,
   UpdateTableBodyType
 } from '@/schemaValidations/table.schema'
+import {
+  TableSessionListRes,
+  TableSessionListResType,
+  TableSessionParamsType
+} from '@/schemaValidations/tableSessions.schema'
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 
 export default async function tablesRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
@@ -140,6 +157,61 @@ export default async function tablesRoutes(fastify: FastifyInstance, options: Fa
       reply.send({
         message: 'Xóa bàn thành công!',
         data: result as TableResType['data']
+      })
+    }
+  )
+
+  fastify.get<{
+    Reply: TableSessionListResType
+    Params: TableSessionParamsType
+  }>(
+    '/:id/sessions',
+    {
+      schema: {
+        response: {
+          200: TableSessionListRes
+        }
+      },
+      preValidation: fastify.auth([pauseApiHook, requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
+        relation: 'and'
+      })
+    },
+    async (request, reply) => {
+      const data = await getListHistoryTableSession({
+        number: Number(request.params.id)
+      })
+      reply.send({
+        data: data as TableSessionListResType['data'],
+        message: 'Lấy danh sách lịch sử phiên bàn thành công!'
+      })
+    }
+  )
+
+  fastify.post<{
+    Reply: CleanTableResType
+    Body: CleanTableBodyType
+  }>(
+    '/clean',
+    {
+      schema: {
+        body: CleanTableBody,
+        response: {
+          200: CleanTableRes
+        }
+      },
+      preValidation: fastify.auth([pauseApiHook, requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
+        relation: 'and'
+      })
+    },
+    async (request, reply) => {
+      const data = await cleanTableController({
+        tableNumber: request.body.tableNumber,
+        accountId: request.decodedAccessToken?.userId as number,
+        io: fastify.io
+      })
+      reply.send({
+        data: data as CleanTableResType['data'],
+        message: 'Dọn bàn thành công!'
       })
     }
   )

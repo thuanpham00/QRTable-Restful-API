@@ -3,7 +3,7 @@ import { AccountSchema } from '@/schemaValidations/account.schema'
 import { TableSchema } from '@/schemaValidations/table.schema'
 import z from 'zod'
 
-const DishSnapshotSchema = z.object({
+export const DishSnapshotSchema = z.object({
   id: z.number(),
   name: z.string(),
   price: z.number(),

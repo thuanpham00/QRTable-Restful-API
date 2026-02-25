@@ -1,8 +1,10 @@
+import { ManagerRoom } from '@/constants/type'
 import prisma from '@/database'
 import { randomId } from '@/utils/helpers'
 import { Cron } from 'croner'
+import { FastifyInstance } from 'fastify'
 
-const autoRotateTableTokenJob = () => {
+const autoRotateTableTokenJob = (fastify: FastifyInstance) => {
   // Chạy mỗi 10 phút
   Cron('*/10 * * * *', async () => {
     try {
@@ -22,6 +24,11 @@ const autoRotateTableTokenJob = () => {
             updatedAt: new Date() // Nếu có field này
           }
         })
+      }
+      if (fastify.io) {
+        fastify.io.to(ManagerRoom).emit('table-token-rotated')
+      } else {
+        console.warn('[Cron] Socket.IO not available, skipping emit')
       }
 
       console.log(`[Cron] Rotated tokens for ${tables.length} tables`)

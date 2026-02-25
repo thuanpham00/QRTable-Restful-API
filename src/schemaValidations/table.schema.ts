@@ -60,3 +60,22 @@ export const TableParams = z.object({
   number: z.coerce.number()
 })
 export type TableParamsType = z.TypeOf<typeof TableParams>
+
+export const CleanTableSchema = z.object({
+  sessionId: z.number(),
+  guestsLoggedOut: z.number(),
+  tableNumber: z.number()
+})
+
+export const CleanTableRes = z.object({
+  data: CleanTableSchema,
+  message: z.string()
+})
+
+export type CleanTableResType = z.TypeOf<typeof CleanTableRes>
+
+export const CleanTableBody = z.object({
+  tableNumber: z.coerce.number().positive()
+})
+
+export type CleanTableBodyType = z.TypeOf<typeof CleanTableBody>

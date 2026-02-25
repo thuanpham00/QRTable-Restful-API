@@ -15,7 +15,6 @@ import { createFolder } from '@/utils/helpers'
 import mediaRoutes from '@/routes/media.route'
 import staticRoutes from '@/routes/static.route'
 import dishRoutes from '@/routes/dish.route'
-import testRoutes from '@/routes/test.route'
 import { initOwnerAccount } from '@/controllers/account.controller'
 import tablesRoutes from '@/routes/table.route'
 import guestRoutes from '@/routes/guest.route'
@@ -30,6 +29,7 @@ import guestCallRoutes from '@/routes/guest-call.route'
 import paymentRoutes from '@/routes/payment.route'
 import sepayRoutes from '@/routes/seepay.route'
 import autoRotateTableTokenJob from '@/jobs/autoRotateTableTokenJob'
+import tableSessionsRoutes from '@/routes/table-session.route'
 
 const fastify = Fastify({
   logger: false
@@ -39,8 +39,6 @@ const fastify = Fastify({
 const start = async () => {
   try {
     createFolder(path.resolve(envConfig.UPLOAD_FOLDER))
-    autoRemoveRefreshTokenJob() // tự động xóa refresh token sau mỗi giờ
-    autoRotateTableTokenJob() // tự động changeToken cho bàn sau 10 phút 1 lần
 
     const whitelist = ['*']
     fastify.register(cors, {
@@ -65,6 +63,10 @@ const start = async () => {
       }
     })
     fastify.register(socketPlugin) // Custom socket logic (auth, rooms)
+
+    autoRemoveRefreshTokenJob() // tự động xóa refresh token sau mỗi giờ
+    autoRotateTableTokenJob(fastify) // tự động changeToken cho bàn sau 10 phút 1 lần
+
     fastify.register(authRoutes, {
       prefix: '/auth'
     })
@@ -92,11 +94,11 @@ const start = async () => {
     fastify.register(tablesRoutes, {
       prefix: '/tables'
     })
+    fastify.register(tableSessionsRoutes, {
+      prefix: '/table-sessions'
+    })
     fastify.register(orderRoutes, {
       prefix: '/orders'
-    })
-    fastify.register(testRoutes, {
-      prefix: '/test'
     })
     fastify.register(indicatorRoutes, {
       prefix: '/indicators'

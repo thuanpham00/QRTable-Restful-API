@@ -45,6 +45,7 @@ export default async function guestRoutes(fastify: FastifyInstance, options: Fas
       const { body } = request
       const result = await guestLoginController(body)
       fastify.io.to(ManagerRoom).emit('update-status-table', result) // cập nhật trạng thái bàn
+      fastify.io.to(ManagerRoom).emit('refetch-list-order-and-table-session') // cập nhật list-order và table-session khi khách log out
       reply.send({
         message: 'Đăng nhập thành công',
         data: {
@@ -62,6 +63,7 @@ export default async function guestRoutes(fastify: FastifyInstance, options: Fas
       })
     }
   )
+
   fastify.post<{ Reply: MessageResType; Body: LogoutBodyType }>(
     '/auth/logout',
     {
@@ -75,6 +77,7 @@ export default async function guestRoutes(fastify: FastifyInstance, options: Fas
     },
     async (request, reply) => {
       const message = await guestLogoutController(request.decodedAccessToken?.userId as number, fastify.io)
+      fastify.io.to(ManagerRoom).emit('refetch-list-order-and-table-session') // cập nhật list-order và table-session khi khách log out
       reply.send({
         message
       })

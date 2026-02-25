@@ -10,7 +10,7 @@ import {
   updateDish,
   updateIngredientToDish
 } from '@/controllers/dish.controller'
-import { pauseApiHook, requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   AddIngredientToDish,
   AddIngredientToDishType,
@@ -104,7 +104,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
         }
       },
       // Login AND (Owner OR Employee)
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },
@@ -131,7 +131,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
           200: DishRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },
@@ -156,7 +156,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
           200: DishRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },
@@ -228,7 +228,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
           200: DishIngredientRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },
@@ -256,7 +256,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
           200: DishIngredientRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },
@@ -282,7 +282,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
           200: DishIngredientRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
         relation: 'and'
       })
     },
