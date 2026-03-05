@@ -17,6 +17,7 @@ export const CreateIngredientBody = z.object({
   allergenType: z.string().optional(),
   isVegetarian: z.boolean().optional(),
   isVegan: z.boolean().optional(),
+  isActive: z.boolean().optional(),
   category: z.string().optional(),
   image: z.string().url().optional()
 })

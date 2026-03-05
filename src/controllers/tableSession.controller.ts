@@ -101,25 +101,12 @@ export const getDetailHistoryTableSession = async (query: { id: number }) => {
     }
   })
 
-  if (tableSession.paymentGroups.length > 0) {
-    return {
-      ...tableSession,
-      paymentType: 'group' as const,
-      individualPayments: []
-    }
-  }
-
   const listGuestId = tableSession.guests.map((guest) => guest.id)
 
   const individualPayments = await prisma.payment.findMany({
     where: {
       guestId: { in: listGuestId },
-      paymentGroupId: null,
-      orders: {
-        some: {
-          tableSessionId: query.id
-        }
-      }
+      paymentGroupId: null
     },
     include: {
       guest: { select: { id: true, name: true } },
@@ -130,11 +117,29 @@ export const getDetailHistoryTableSession = async (query: { id: number }) => {
       createdBy: { select: { id: true, name: true } }
     }
   })
+  // Case 2: vừa có thanh toán nhóm vừa có thanh toán lẻ (thanh toán nhiều lần trong 1 phiên)
+  if (tableSession.paymentGroups.length > 0 && individualPayments.length > 0) {
+    return {
+      ...tableSession,
+      paymentType: 'group' as const,
+      individualPayments
+    }
+  }
 
+  // Case 1: chỉ có thanh toán nhóm
+  if (tableSession.paymentGroups.length > 0) {
+    return {
+      ...tableSession,
+      paymentType: 'group' as const,
+      individualPayments: []
+    }
+  }
+
+  // Case 3: chỉ có thanh toán lẻ
   return {
     ...tableSession,
     paymentType: 'individual' as const,
-    paymentGroups: [], // Clear vì đã check không có
+    paymentGroups: [],
     individualPayments
   }
 }

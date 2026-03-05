@@ -13,29 +13,47 @@ import { ManagerRoom, OrderStatus } from '@/constants/type'
 export const createPaymentForTable = async (body: CreatePaymentByTableBodyType, accountId: number, io?: any) => {
   const { tableNumber, paymentMethod, guestIds } = body
 
-  // 1. Check existing PaymentGroup nếu là SEPAY (tránh tạo group mới mỗi lần mở modal QR)
-  if (paymentMethod === 'SEPAY') {
-    const existingGroup = await prisma.paymentGroup.findFirst({
-      where: {
-        tableNumber,
-        status: 'Pending',
-        paymentMethod: 'SEPAY'
-      },
-      include: {
-        payments: {
-          include: {
-            orders: {
-              include: {
-                dishSnapshot: true,
-                orderHandler: true,
-                guest: true
-              }
+  const existingGroup = await prisma.paymentGroup.findFirst({
+    where: {
+      tableNumber,
+      status: 'Pending',
+      paymentMethod: 'SEPAY'
+    },
+    include: {
+      payments: {
+        include: {
+          orders: {
+            include: {
+              dishSnapshot: true,
+              orderHandler: true,
+              guest: true
             }
           }
         }
       }
-    })
-
+    }
+  })
+  // SEPAY → CASH: cancel group cũ, tạo mới
+  if (existingGroup && paymentMethod === 'CASH') {
+    await prisma.$transaction([
+      prisma.paymentGroup.update({
+        where: { id: existingGroup.id },
+        data: { status: 'Cancelled' }
+      }),
+      prisma.order.updateMany({
+        where: {
+          paymentId: { in: existingGroup.payments.map((p) => p.id) }
+        },
+        data: { paymentId: null, status: OrderStatus.Delivered }
+      }),
+      prisma.payment.updateMany({
+        where: { paymentGroupId: existingGroup.id },
+        data: { status: 'Cancelled' }
+      })
+    ])
+  }
+  // 1. Check existing PaymentGroup nếu là SEPAY (tránh tạo group mới mỗi lần mở modal QR)
+  else if (existingGroup && paymentMethod === 'SEPAY') {
     // Nếu đã có PaymentGroup Pending, return existing group với QR code
     if (existingGroup) {
       const allOrders = existingGroup.payments.flatMap((p) => p.orders)
@@ -282,7 +300,19 @@ export const createPayment = async (body: CreatePaymentBodyType, accountId: numb
   })
 
   // Nếu đã tồn tại payment, trả về thông tin payment đó
-  if (existingPayment) {
+  if (existingPayment && existingPayment.paymentMethod !== paymentMethod) {
+    // case đổi phương thức thanh toán (ví dụ từ SEPAY sang CASH) - hủy payment cũ và tạo payment mới
+    await prisma.$transaction([
+      prisma.payment.update({
+        where: { id: existingPayment.id },
+        data: { status: 'Cancelled' }
+      }),
+      prisma.order.updateMany({
+        where: { paymentId: existingPayment.id },
+        data: { paymentId: null, status: OrderStatus.Delivered }
+      })
+    ])
+  } else if (existingPayment) {
     const [ordersResult, socketRecord] = await Promise.all([
       prisma.order.findMany({
         where: {

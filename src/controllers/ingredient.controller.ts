@@ -97,6 +97,7 @@ export const createIngredient = (data: CreateIngredientBodyType) => {
       isVegetarian: data.isVegetarian,
       isVegan: data.isVegan,
       category: data.category,
+      isActive: data.isActive ?? false,
       image: data.image
     }
   })
