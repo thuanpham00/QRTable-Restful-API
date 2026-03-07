@@ -75,3 +75,71 @@ export enum PaymentMethod {
   CASH, // Tiền mặt
   SEPAY // Chuyển khoản sepay
 }
+
+// Dietary Preferences cho khách hàng
+export const DietaryPreference = {
+  VEGETARIAN: 'vegetarian', // Chay (không thịt)
+  VEGAN: 'vegan', // Thuần chay (không sản phẩm động vật)
+  LOW_CARB: 'low-carb', // Ít tinh bột
+  GLUTEN_FREE: 'gluten-free', // Không gluten
+  KETO: 'keto', // Chế độ keto
+  PESCATARIAN: 'pescatarian' // Ăn hải sản, không thịt
+} as const
+
+export const DietaryPreferenceValues = [
+  DietaryPreference.VEGETARIAN,
+  DietaryPreference.VEGAN,
+  DietaryPreference.LOW_CARB,
+  DietaryPreference.GLUTEN_FREE,
+  DietaryPreference.KETO,
+  DietaryPreference.PESCATARIAN
+] as const
+
+export const DietaryPreferenceLabels = {
+  [DietaryPreference.VEGETARIAN]: 'Chay (ăn trứng, sữa)',
+  [DietaryPreference.VEGAN]: 'Thuần chay',
+  [DietaryPreference.LOW_CARB]: 'Ít tinh bột',
+  [DietaryPreference.GLUTEN_FREE]: 'Không gluten',
+  [DietaryPreference.KETO]: 'Keto',
+  [DietaryPreference.PESCATARIAN]: 'Hải sản (không thịt)'
+} as const
+
+// Allergens - Chất gây dị ứng
+export const Allergen = {
+  SHELLFISH: 'shellfish', // Hải sản có vỏ
+  FISH: 'fish', // Cá
+  DAIRY: 'dairy', // Sữa
+  EGGS: 'eggs', // Trứng
+  PEANUTS: 'peanuts', // Đậu phộng
+  TREE_NUTS: 'tree-nuts', // Các loại hạt
+  SOY: 'soy', // Đậu nành
+  WHEAT: 'wheat', // Lúa mì
+  GLUTEN: 'gluten', // Gluten
+  SESAME: 'sesame' // Mè
+} as const
+
+export const AllergenValues = [
+  Allergen.SHELLFISH,
+  Allergen.FISH,
+  Allergen.DAIRY,
+  Allergen.EGGS,
+  Allergen.PEANUTS,
+  Allergen.TREE_NUTS,
+  Allergen.SOY,
+  Allergen.WHEAT,
+  Allergen.GLUTEN,
+  Allergen.SESAME
+] as const
+
+export const AllergenLabels = {
+  [Allergen.SHELLFISH]: 'Hải sản (tôm, cua, sò)',
+  [Allergen.FISH]: 'Cá',
+  [Allergen.DAIRY]: 'Sữa',
+  [Allergen.EGGS]: 'Trứng',
+  [Allergen.PEANUTS]: 'Đậu phộng',
+  [Allergen.TREE_NUTS]: 'Hạt (óc chó, hạnh nhân)',
+  [Allergen.SOY]: 'Đậu nành',
+  [Allergen.WHEAT]: 'Lúa mì',
+  [Allergen.GLUTEN]: 'Gluten',
+  [Allergen.SESAME]: 'Mè'
+} as const

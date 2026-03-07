@@ -54,6 +54,8 @@ export default async function guestRoutes(fastify: FastifyInstance, options: Fas
             name: result.guest.name,
             role: Role.Guest,
             tableNumber: result.guest.tableNumber,
+            dietaryPreferences: result.guest.dietaryPreferences,
+            allergyInfo: result.guest.allergyInfo,
             createdAt: result.guest.createdAt,
             updatedAt: result.guest.updatedAt
           },

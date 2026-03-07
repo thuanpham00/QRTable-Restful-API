@@ -1,7 +1,7 @@
 import envConfig from '@/config'
 import { DishStatus, ManagerRoom, MenuItemStatus, OrderStatus, Role, TableStatus } from '@/constants/type'
 import prisma from '@/database'
-import { GuestCreateOrdersBodyType, GuestLoginBodyType } from '@/schemaValidations/guest.schema'
+import { GuestCreateOrdersBodyType, GuestLoginBodyType, UpdateGuestBodyType } from '@/schemaValidations/guest.schema'
 import { TokenPayload } from '@/types/jwt.types'
 import { AuthError } from '@/utils/errors'
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '@/utils/jwt'
@@ -32,7 +32,9 @@ export const guestLoginController = async (body: GuestLoginBodyType) => {
   let guest = await prisma.guest.create({
     data: {
       name: body.name,
-      tableNumber: body.tableNumber
+      tableNumber: body.tableNumber,
+      dietaryPreferences: body.dietaryPreferences || null,
+      allergyInfo: body.allergyInfo || null
     }
   })
 
@@ -94,6 +96,17 @@ export const guestLoginController = async (body: GuestLoginBodyType) => {
       refreshToken,
       refreshTokenExpiresAt,
       tableSessionId: sessionId
+    }
+  })
+
+  // tạo mẫu 1 đoạn chat AI xin chào
+  await prisma.chatHistory.create({
+    data: {
+      sessionId: String(sessionId),
+      guestId: guest.id,
+      message: '',
+      response: 'Xin chào! Tôi là AI assistant của nhà hàng. Tôi có thể giúp gì cho bạn?',
+      intent: 'greeting'
     }
   })
 

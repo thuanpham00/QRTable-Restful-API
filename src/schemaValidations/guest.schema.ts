@@ -1,12 +1,53 @@
-import { OrderModeTypeValues, Role } from '@/constants/type'
+import { OrderModeTypeValues, Role, DietaryPreferenceValues, AllergenValues } from '@/constants/type'
 import { OrderSchema } from '@/schemaValidations/order.schema'
 import z from 'zod'
+
+// Helper để validate comma-separated string hoặc array
+const dietaryPreferencesSchema = z
+  .union([
+    z.array(z.enum(DietaryPreferenceValues)), // Array: ["vegetarian", "vegan"]
+    z.string().refine(
+      (val) => {
+        if (!val) return true
+        const items = val.split(',').map((s) => s.trim())
+        return items.every((item) => DietaryPreferenceValues.includes(item as any))
+      },
+      { message: 'Invalid dietary preference value' }
+    ) // String: "vegetarian,vegan"
+  ])
+  .optional()
+  .transform((val) => {
+    // Chuyển array thành string để lưu DB
+    if (Array.isArray(val)) return val.join(',')
+    return val
+  })
+
+const allergyInfoSchema = z
+  .union([
+    z.array(z.enum(AllergenValues)), // Array: ["shellfish", "dairy"]
+    z.string().refine(
+      (val) => {
+        if (!val) return true
+        const items = val.split(',').map((s) => s.trim())
+        return items.every((item) => AllergenValues.includes(item as any))
+      },
+      { message: 'Invalid allergen value' }
+    ) // String: "shellfish,dairy"
+  ])
+  .optional()
+  .transform((val) => {
+    // Chuyển array thành string để lưu DB
+    if (Array.isArray(val)) return val.join(',')
+    return val
+  })
 
 export const GuestLoginBody = z
   .object({
     name: z.string().min(2).max(50),
     tableNumber: z.number(),
-    token: z.string()
+    token: z.string(),
+    dietaryPreferences: dietaryPreferencesSchema,
+    allergyInfo: allergyInfoSchema
   })
   .strict()
 
@@ -21,6 +62,8 @@ export const GuestLoginRes = z.object({
       name: z.string(),
       role: z.enum([Role.Guest]),
       tableNumber: z.number().nullable(),
+      dietaryPreferences: z.string().nullable(),
+      allergyInfo: z.string().nullable(),
       createdAt: z.date(),
       updatedAt: z.date()
     })
@@ -57,8 +100,28 @@ export const GuestSchema = z.object({
   id: z.number(),
   name: z.string(),
   tableNumber: z.number().nullable(),
+  dietaryPreferences: z.string().nullable(),
+  allergyInfo: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date()
 })
 
 export type GuestSchemaType = z.TypeOf<typeof GuestSchema>
+
+// Update guest profile (sau khi đăng nhập)
+export const UpdateGuestBody = z
+  .object({
+    name: z.string().min(2).max(50).optional(),
+    dietaryPreferences: dietaryPreferencesSchema,
+    allergyInfo: allergyInfoSchema
+  })
+  .strict()
+
+export type UpdateGuestBodyType = z.TypeOf<typeof UpdateGuestBody>
+
+export const UpdateGuestRes = z.object({
+  data: GuestSchema,
+  message: z.string()
+})
+
+export type UpdateGuestResType = z.TypeOf<typeof UpdateGuestRes>
