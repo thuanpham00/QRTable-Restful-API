@@ -123,15 +123,34 @@ export const createOrdersController = async (orderHandlerId: number, body: Creat
       }
     })
   ])
-
-  await prisma.tableSession.update({
+  // check coi phiên này có tồn tại với guest này trước đó không
+  const tableSessions = await prisma.tableSession.findFirst({
     where: {
       id: guest.tableSessionId!
-    },
-    data: {
-      orderCount: { increment: ordersRecord.length }
     }
   })
+  if (tableSessions?.status !== 'Active') {
+    await prisma.tableSession.update({
+      where: {
+        id: guest.tableSessionId!
+      },
+      data: {
+        status: 'Active',
+        guestCount: { increment: 1 },
+        endTime: null,
+        orderCount: { increment: ordersRecord.length }
+      }
+    })
+  } else if (tableSessions?.status === 'Active') {
+    await prisma.tableSession.update({
+      where: {
+        id: guest.tableSessionId!
+      },
+      data: {
+        orderCount: { increment: ordersRecord.length }
+      }
+    })
+  }
 
   return {
     orders: ordersRecord,

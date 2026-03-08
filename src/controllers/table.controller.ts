@@ -134,7 +134,24 @@ export const updateTable = (number: number, data: UpdateTableBodyType) => {
   })
 }
 
-export const deleteTable = (number: number) => {
+export const deleteTable = async (number: number) => {
+  const findTable = await prisma.table.findUnique({
+    where: {
+      number
+    }
+  })
+  const activeSession = await prisma.tableSession.findFirst({
+    where: {
+      tableNumber: number,
+      status: 'Active'
+    }
+  })
+  if (findTable?.status === TableStatus.Serving) {
+    throw new Error(`Bàn ${number} đang phục vụ, không thể xóa`)
+  }
+  if (activeSession) {
+    throw new Error(`Bàn ${number} đang có phiên hoạt động, không thể xóa`)
+  }
   return prisma.table.delete({
     where: {
       number

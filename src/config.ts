@@ -45,7 +45,9 @@ const configSchema = z.object({
   SEPAY_BANK_CODE: z.string().default('MBBank'),
   SEPAY_ACCOUNT_NUMBER: z.string(),
   SEPAY_ACCOUNT_NAME: z.string().default('KITCHEN SMART'),
-  SEPAY_PAYMENT_PREFIX: z.string().default('KS')
+  SEPAY_PAYMENT_PREFIX: z.string().default('KS'),
+
+  GROQ_API_KEY: z.string()
 })
 
 const configServer = configSchema.safeParse(process.env)
