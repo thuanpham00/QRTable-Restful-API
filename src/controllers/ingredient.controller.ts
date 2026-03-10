@@ -31,17 +31,16 @@ export const getIngredientList = async ({ page, limit, name, category, paginatio
 
   const skip = (page - 1) * limit
 
-  const whereCondition = name ? { name: { contains: name } } : {}
-  const whereCondition2 = category ? { category: category } : {}
+  const whereCondition = category ? { category: category } : {}
 
   const [ingredients, total] = await Promise.all([
     prisma.ingredient.findMany({
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
-      where: { ...whereCondition, ...whereCondition2 }
+      where: whereCondition
     }),
-    prisma.ingredient.count({ where: { ...whereCondition, ...whereCondition2 } })
+    prisma.ingredient.count({ where: whereCondition })
   ])
   // compute usage counts for current page items
   const ids = ingredients.map((i) => i.id)

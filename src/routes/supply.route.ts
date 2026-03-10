@@ -56,7 +56,7 @@ export default async function suppliesRoutes(fastify: FastifyInstance, options: 
     }
   )
 
-  // GET /suppliers/:id - Lấy danh sach nguyên liệu còn lại (nhà cung cấp chưa link)
+  // GET /supplies/:id - Lấy danh sach nguyên liệu còn lại (nhà cung cấp chưa link)
   fastify.get<{
     Params: SupplierIngredientParams_2_Type
     Reply: IngredientListResType
@@ -81,7 +81,7 @@ export default async function suppliesRoutes(fastify: FastifyInstance, options: 
     }
   )
 
-  // GET /supply/:id - Lấy chi tiết nhà cung cấp - nguyên liệu
+  // GET /supplies/:id - Lấy chi tiết nhà cung cấp - nguyên liệu
   fastify.get<{
     Params: SupplierIngredientParamsType
     Reply: SupplierIngredientResType
@@ -104,7 +104,7 @@ export default async function suppliesRoutes(fastify: FastifyInstance, options: 
     }
   )
 
-  // POST /suppliers - Tạo link nhà cung cấp - nguyên liệu mới
+  // POST /supplies - Tạo link nhà cung cấp - nguyên liệu mới
   fastify.post<{
     Body: CreateSupplierIngredientBodyType
     Reply: SupplierIngredientResType
@@ -127,7 +127,7 @@ export default async function suppliesRoutes(fastify: FastifyInstance, options: 
     }
   )
 
-  // PUT /suppliers/:id - Cập nhật link nhà cung cấp - nguyên liệu mới
+  // PUT /supplies/:id - Cập nhật link nhà cung cấp - nguyên liệu mới
   fastify.put<{
     Params: SupplierIngredientParamsType
     Body: UpdateSupplierIngredientBodyType
@@ -152,7 +152,7 @@ export default async function suppliesRoutes(fastify: FastifyInstance, options: 
     }
   )
 
-  // DELETE /suppliers/:id - Xóa link nhà cung cấp - nguyên liệu
+  // DELETE /supplies/:id - Xóa link nhà cung cấp - nguyên liệu
   fastify.delete<{
     Params: SupplierIngredientParamsType
     Reply: SupplierIngredientResType

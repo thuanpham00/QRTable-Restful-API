@@ -33,6 +33,7 @@ import tableSessionsRoutes from '@/routes/table-session.route'
 import geminiRoutes from '@/routes/gemini.route'
 import supplierRoutes from '@/routes/supplier.route'
 import suppliesRoutes from '@/routes/supply.route'
+import inventoryStockRoutes from '@/routes/inventory-stocks.route'
 
 const fastify = Fastify({
   logger: false
@@ -126,6 +127,9 @@ const start = async () => {
     })
     fastify.register(suppliesRoutes, {
       prefix: '/supplies'
+    })
+    fastify.register(inventoryStockRoutes, {
+      prefix: '/inventory-stocks'
     })
     await initOwnerAccount()
     await fastify.listen({

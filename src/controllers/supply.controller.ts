@@ -25,13 +25,13 @@ export const getSupplyList = async (idSupplier: number) => {
           select: {
             id: true,
             name: true,
-            category: true
+            category: true,
+            image: true
           }
         }
       }
     })
   ])
-  console.log(supplierIngredients)
 
   return {
     data: supplierIngredients
@@ -115,7 +115,8 @@ export const createSupply = async (data: CreateSupplierIngredientBodyType) => {
         select: {
           id: true,
           name: true,
-          category: true
+          category: true,
+          image: true
         }
       }
     }
@@ -140,7 +141,8 @@ export const updateSupply = async (id: number, data: UpdateSupplierIngredientBod
         select: {
           id: true,
           name: true,
-          category: true
+          category: true,
+          image: true
         }
       }
     }
