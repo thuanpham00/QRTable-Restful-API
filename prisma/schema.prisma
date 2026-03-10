@@ -27,6 +27,8 @@ model Account {
   refreshToken RefreshToken[]
   sockets      Socket[]
   guestCalls   GuestCall[]
+  importReceipts  ImportReceipt[]  @relation("ImportReceiptCreatedBy")
+  exportReceipts  ExportReceipt[]  @relation("ExportReceiptCreatedBy")
 
   paymentsCreated Payment[]
   paymentGroupsCreated PaymentGroup[]
@@ -97,6 +99,8 @@ model Order {
   tableSessionId  Int?
   tableSession    TableSession? @relation(fields: [tableSessionId], references: [id], onDelete: SetNull)
 
+  exportReceipts  ExportReceipt[]
+  
   orderMode      String       @default("DINE_IN")
   status         String       @default("Pending")
   createdAt      DateTime     @default(now())
@@ -234,7 +238,11 @@ model Ingredient {
   category        String?           // phân loại nguyên liệu "protein,vegetable,spice"
   image           String?           // hình ảnh nguyên liệu    
   dishIngredients DishIngredient[]
+  supplierIngredients SupplierIngredient[]
   isActive        Boolean           @default(true) // nguyên liệu còn sử dụng hay không
+
+  exportReceiptItems  ExportReceiptItem[]
+  inventoryStock      InventoryStock?        // 1-1 relation
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   
@@ -405,4 +413,200 @@ model SepayTransaction {
   @@index([content])
   @@index([processed])
   @@index([transactionDate]) // ✅ THÊM: Index cho query theo thời gian
+}
+
+
+// nhập kho - xuất kho - tồn kho
+// 1. NHÀ CUNG CẤP
+model Supplier {
+  id          Int      @id @default(autoincrement())
+  name        String
+  code        String   @unique
+  phone       String?
+  email       String?
+  address     String?
+  status      String   @default("Active") // Active | Inactive
+  note        String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  supplierIngredients SupplierIngredient[]
+  importReceipts      ImportReceipt[]
+  
+  @@index([status])
+  @@index([code])
+}
+
+// 2. BẢNG NỐI: NCC - NGUYÊN LIỆU
+model SupplierIngredient {
+  id           Int     @id @default(autoincrement())
+  supplierId   Int
+  ingredientId Int
+  
+  price        Float
+  isPreferred  Boolean @default(false)
+  note         String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  supplier           Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  ingredient         Ingredient          @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  importReceiptItems ImportReceiptItem[]
+  
+  @@unique([supplierId, ingredientId])
+  @@index([supplierId])
+  @@index([ingredientId])
+  @@index([isPreferred])
+}
+
+// 3. PHIẾU NHẬP KHO
+model ImportReceipt {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  supplierId  Int
+  
+  importDate  DateTime @default(now())
+  totalAmount Float    @default(0)
+  status      String   @default("Draft") // Draft | Completed | Cancelled
+  note        String?
+  
+  createdBy   Int
+  createdByAccount Account @relation("ImportReceiptCreatedBy", fields: [createdBy], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  items    ImportReceiptItem[]
+  
+  @@index([status])
+  @@index([importDate])
+  @@index([supplierId])
+  @@index([createdBy])
+}
+
+// 4. CHI TIẾT PHIẾU NHẬP KHO
+model ImportReceiptItem {
+  id                   Int      @id @default(autoincrement())
+  importReceiptId      Int
+  supplierIngredientId Int
+  
+  quantity             Float
+  unitPrice            Float
+  totalPrice           Float
+  
+  batchNumber          String?
+  expiryDate           DateTime?
+  note                 String?
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  importReceipt      ImportReceipt      @relation(fields: [importReceiptId], references: [id], onDelete: Cascade)
+  supplierIngredient SupplierIngredient @relation(fields: [supplierIngredientId], references: [id])
+  
+  @@index([importReceiptId])
+  @@index([supplierIngredientId])
+  @@index([expiryDate])
+}
+
+// 5. PHIẾU XUẤT KHO
+model ExportReceipt {
+  id             Int      @id @default(autoincrement())
+  code           String   @unique
+  
+  exportDate     DateTime @default(now())
+  exportType     String   // Production | Waste | Other
+  totalAmount    Float    @default(0)
+  status         String   @default("Draft") // Draft | Completed | Cancelled
+  
+  relatedOrderId Int?
+  note           String?
+  
+  createdBy      Int
+  createdByAccount Account @relation("ExportReceiptCreatedBy", fields: [createdBy], references: [id])
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  relatedOrder Order?             @relation(fields: [relatedOrderId], references: [id])
+  items        ExportReceiptItem[]
+  
+  @@index([status])
+  @@index([exportDate])
+  @@index([exportType])
+  @@index([createdBy])
+  @@index([relatedOrderId])
+}
+
+// 6. CHI TIẾT PHIẾU XUẤT KHO
+model ExportReceiptItem {
+  id              Int    @id @default(autoincrement())
+  exportReceiptId Int
+  ingredientId    Int
+  
+  quantity        Float
+  unitPrice       Float
+  totalPrice      Float
+  
+  batchNumber     String? // ✅ Xuất từ lô nào
+  note            String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  exportReceipt ExportReceipt @relation(fields: [exportReceiptId], references: [id], onDelete: Cascade)
+  ingredient    Ingredient    @relation(fields: [ingredientId], references: [id])
+  
+  @@index([exportReceiptId])
+  @@index([ingredientId])
+}
+
+// 7. TỒN KHO
+model InventoryStock {
+  id           Int      @id @default(autoincrement())
+  ingredientId Int      @unique
+  
+  quantity     Float    @default(0)
+  minStock     Float?
+  maxStock     Float?
+  
+  avgUnitPrice Float    @default(0)
+  totalValue   Float    @default(0)
+  
+  lastImport   DateTime?
+  lastExport   DateTime?
+  
+  updatedAt    DateTime @updatedAt
+  
+  ingredient Ingredient       @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  batches    InventoryBatch[] // ✅ THÊM: Track theo lô
+  
+  @@index([quantity])
+  @@index([lastImport])
+  @@index([lastExport])
+}
+
+// 8. LÔ HÀNG (FIFO/LIFO)
+model InventoryBatch {
+  id               Int      @id @default(autoincrement())
+  inventoryStockId Int
+  
+  batchNumber      String
+  quantity         Float    // Số lượng còn lại trong lô
+  unitPrice        Float    // Giá nhập của lô này
+  
+  importDate       DateTime
+  expiryDate       DateTime?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  inventoryStock InventoryStock @relation(fields: [inventoryStockId], references: [id], onDelete: Cascade)
+  
+  @@index([inventoryStockId])
+  @@index([expiryDate])
+  @@index([batchNumber])
 }

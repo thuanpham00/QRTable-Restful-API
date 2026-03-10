@@ -16,6 +16,8 @@ Table Account {
   refreshToken RefreshToken [not null]
   sockets Socket [not null]
   guestCalls GuestCall [not null]
+  importReceipts ImportReceipt [not null]
+  exportReceipts ExportReceipt [not null]
   paymentsCreated Payment [not null]
   paymentGroupsCreated PaymentGroup [not null]
   createdAt DateTime [default: `now()`, not null]
@@ -79,6 +81,7 @@ Table Order {
   payment Payment
   tableSessionId Int
   tableSession TableSession
+  exportReceipts ExportReceipt [not null]
   orderMode String [not null, default: 'DINE_IN']
   status String [not null, default: 'Pending']
   createdAt DateTime [default: `now()`, not null]
@@ -196,7 +199,10 @@ Table Ingredient {
   category String
   image String
   dishIngredients DishIngredient [not null]
+  supplierIngredients SupplierIngredient [not null]
   isActive Boolean [not null, default: true]
+  exportReceiptItems ExportReceiptItem [not null]
+  inventoryStock InventoryStock
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
@@ -320,6 +326,131 @@ Table SepayTransaction {
   createdAt DateTime [default: `now()`, not null]
 }
 
+Table Supplier {
+  id Int [pk, increment]
+  name String [not null]
+  code String [unique, not null]
+  phone String
+  email String
+  address String
+  status String [not null, default: 'Active']
+  note String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  supplierIngredients SupplierIngredient [not null]
+  importReceipts ImportReceipt [not null]
+}
+
+Table SupplierIngredient {
+  id Int [pk, increment]
+  supplierId Int [not null]
+  ingredientId Int [not null]
+  price Float [not null]
+  isPreferred Boolean [not null, default: false]
+  note String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  supplier Supplier [not null]
+  ingredient Ingredient [not null]
+  importReceiptItems ImportReceiptItem [not null]
+
+  indexes {
+    (supplierId, ingredientId) [unique]
+  }
+}
+
+Table ImportReceipt {
+  id Int [pk, increment]
+  code String [unique, not null]
+  supplierId Int [not null]
+  importDate DateTime [default: `now()`, not null]
+  totalAmount Float [not null, default: 0]
+  status String [not null, default: 'Draft']
+  note String
+  createdBy Int [not null]
+  createdByAccount Account [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  supplier Supplier [not null]
+  items ImportReceiptItem [not null]
+}
+
+Table ImportReceiptItem {
+  id Int [pk, increment]
+  importReceiptId Int [not null]
+  supplierIngredientId Int [not null]
+  quantity Float [not null]
+  unitPrice Float [not null]
+  totalPrice Float [not null]
+  batchNumber String
+  expiryDate DateTime
+  note String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  importReceipt ImportReceipt [not null]
+  supplierIngredient SupplierIngredient [not null]
+}
+
+Table ExportReceipt {
+  id Int [pk, increment]
+  code String [unique, not null]
+  exportDate DateTime [default: `now()`, not null]
+  exportType String [not null]
+  totalAmount Float [not null, default: 0]
+  status String [not null, default: 'Draft']
+  relatedOrderId Int
+  note String
+  createdBy Int [not null]
+  createdByAccount Account [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  relatedOrder Order
+  items ExportReceiptItem [not null]
+}
+
+Table ExportReceiptItem {
+  id Int [pk, increment]
+  exportReceiptId Int [not null]
+  ingredientId Int [not null]
+  quantity Float [not null]
+  unitPrice Float [not null]
+  totalPrice Float [not null]
+  batchNumber String
+  note String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  exportReceipt ExportReceipt [not null]
+  ingredient Ingredient [not null]
+}
+
+Table InventoryStock {
+  id Int [pk, increment]
+  ingredientId Int [unique, not null]
+  quantity Float [not null, default: 0]
+  minStock Float
+  maxStock Float
+  avgUnitPrice Float [not null, default: 0]
+  totalValue Float [not null, default: 0]
+  lastImport DateTime
+  lastExport DateTime
+  updatedAt DateTime [not null]
+  ingredient Ingredient [not null]
+  batches InventoryBatch [not null]
+}
+
+Table InventoryBatch {
+  id Int [pk, increment]
+  inventoryStockId Int [not null]
+  batchNumber String [not null]
+  quantity Float [not null]
+  unitPrice Float [not null]
+  importDate DateTime [not null]
+  expiryDate DateTime
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  inventoryStock InventoryStock [not null]
+}
+
 Ref: Account.ownerId > Account.id
 
 Ref: RefreshToken.accountId > Account.id [delete: Cascade]
@@ -383,3 +514,27 @@ Ref: Payment.createdById > Account.id [delete: Set Null]
 Ref: SepayTransaction.paymentId - Payment.id [delete: Set Null]
 
 Ref: SepayTransaction.paymentGroupId - PaymentGroup.id [delete: Set Null]
+
+Ref: SupplierIngredient.supplierId > Supplier.id [delete: Cascade]
+
+Ref: SupplierIngredient.ingredientId > Ingredient.id [delete: Cascade]
+
+Ref: ImportReceipt.createdBy > Account.id
+
+Ref: ImportReceipt.supplierId > Supplier.id
+
+Ref: ImportReceiptItem.importReceiptId > ImportReceipt.id [delete: Cascade]
+
+Ref: ImportReceiptItem.supplierIngredientId > SupplierIngredient.id
+
+Ref: ExportReceipt.createdBy > Account.id
+
+Ref: ExportReceipt.relatedOrderId > Order.id
+
+Ref: ExportReceiptItem.exportReceiptId > ExportReceipt.id [delete: Cascade]
+
+Ref: ExportReceiptItem.ingredientId > Ingredient.id
+
+Ref: InventoryStock.ingredientId - Ingredient.id [delete: Cascade]
+
+Ref: InventoryBatch.inventoryStockId > InventoryStock.id [delete: Cascade]

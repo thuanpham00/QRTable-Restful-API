@@ -24,6 +24,12 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 
 export default async function ingredientRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
+  fastify.addHook(
+    'preValidation',
+    fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
+      relation: 'and'
+    })
+  )
   fastify.get<{
     Reply: IngredientListResType
     Querystring: IngredientQueryType
@@ -83,10 +89,7 @@ export default async function ingredientRoutes(fastify: FastifyInstance, options
         response: {
           200: IngredientRes
         }
-      },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const ingredient = await createIngredient(request.body)
@@ -107,10 +110,7 @@ export default async function ingredientRoutes(fastify: FastifyInstance, options
         response: {
           200: IngredientRes
         }
-      },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const ingredient = await updateIngredient(request.params.id, request.body)
@@ -129,10 +129,7 @@ export default async function ingredientRoutes(fastify: FastifyInstance, options
         response: {
           200: IngredientRes
         }
-      },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const result = await deleteIngredient(request.params.id)

@@ -31,6 +31,8 @@ import sepayRoutes from '@/routes/seepay.route'
 import autoRotateTableTokenJob from '@/jobs/autoRotateTableTokenJob'
 import tableSessionsRoutes from '@/routes/table-session.route'
 import geminiRoutes from '@/routes/gemini.route'
+import supplierRoutes from '@/routes/supplier.route'
+import suppliesRoutes from '@/routes/supply.route'
 
 const fastify = Fastify({
   logger: false
@@ -118,6 +120,12 @@ const start = async () => {
     })
     fastify.register(geminiRoutes, {
       prefix: '/gemini'
+    })
+    fastify.register(supplierRoutes, {
+      prefix: '/suppliers'
+    })
+    fastify.register(suppliesRoutes, {
+      prefix: '/supplies'
     })
     await initOwnerAccount()
     await fastify.listen({
