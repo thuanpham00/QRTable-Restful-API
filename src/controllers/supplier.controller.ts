@@ -1,38 +1,23 @@
 import prisma from '@/database'
-import { CreateSupplierBodyType, SupplierQueryType, UpdateSupplierBodyType } from '@/schemaValidations/supplier.schema'
+import {
+  CreateSupplierBodyType,
+  SupplierListResType,
+  SupplierQueryType,
+  UpdateSupplierBodyType
+} from '@/schemaValidations/supplier.schema'
 
 export const getSupplierList = async ({ page, limit, name, status }: SupplierQueryType) => {
-  const skip = (page - 1) * limit
-
-  const whereCondition: any = {}
-
-  if (name) {
-    whereCondition.name = { contains: name }
-  }
-
-  if (status) {
-    whereCondition.status = status
-  }
-
-  const [suppliers, total] = await Promise.all([
-    prisma.supplier.findMany({
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      where: whereCondition,
-      include: {
-        _count: {
-          select: { supplierIngredients: true }
-        }
+  const suppliers = await prisma.supplier.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      _count: {
+        select: { supplierIngredients: true }
       }
-    }),
-    prisma.supplier.count({
-      where: whereCondition
-    })
-  ])
+    }
+  })
 
   // Map data để thêm ingredientCount
-  const supplierWithCount = suppliers.map((supplier) => ({
+  let supplierWithCount = suppliers.map((supplier: any) => ({
     id: supplier.id,
     name: supplier.name,
     code: supplier.code,
@@ -46,8 +31,21 @@ export const getSupplierList = async ({ page, limit, name, status }: SupplierQue
     ingredientCount: supplier._count.supplierIngredients
   }))
 
+  if (name) {
+    const nameLower = name.toLowerCase()
+    supplierWithCount = supplierWithCount.filter((supplier) => supplier.name.toLowerCase().includes(nameLower))
+  }
+
+  if (status) {
+    supplierWithCount = supplierWithCount.filter((supplier) => supplier.status === status)
+  }
+
+  const total = supplierWithCount.length
+  const skip = (page - 1) * limit
+  const paginatedData = supplierWithCount.slice(skip, skip + limit)
+
   return {
-    data: supplierWithCount,
+    data: paginatedData,
     pagination: {
       page,
       limit,

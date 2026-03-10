@@ -21,7 +21,8 @@ export const SupplierIngredientSchema = z.object({
     .object({
       id: z.number(),
       name: z.string(),
-      category: z.string().nullable()
+      category: z.string().nullable(),
+      image: z.string().nullable()
     })
     .optional()
 })
