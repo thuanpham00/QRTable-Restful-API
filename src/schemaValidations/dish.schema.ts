@@ -41,7 +41,6 @@ export const dishIngredientSchema = z.object({
   ingredientId: z.number(),
   ingredient: IngredientSchema,
   quantity: z.string(),
-  unit: z.string(),
   isOptional: z.boolean(),
   isMain: z.boolean(),
   createdAt: z.date(),
@@ -130,8 +129,7 @@ export type DishIngredientListResType = z.TypeOf<typeof DishIngredientListRes>
 export const AddIngredientToDish = z.object({
   dishId: z.number(),
   ingredientId: z.number(),
-  quantity: z.number().min(1),
-  unit: z.string(),
+  quantity: z.number().min(0),
   isOptional: z.boolean().optional(),
   isMain: z.boolean().optional()
 })

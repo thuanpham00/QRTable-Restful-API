@@ -5,6 +5,7 @@ export const IngredientQuery = BaseQuery.and(
   z.object({
     name: z.string().trim().max(256).optional(),
     category: z.string().optional(),
+    unit: z.string().optional(),
     pagination: z.string().optional()
   })
 )
@@ -14,6 +15,7 @@ export type IngredientQueryType = z.TypeOf<typeof IngredientQuery>
 export const CreateIngredientBody = z.object({
   name: z.string().min(1).max(256),
   description: z.string().max(10000).optional(),
+  unit: z.string().min(1).max(100),
   allergenType: z.string().optional(),
   isVegetarian: z.boolean().optional(),
   isVegan: z.boolean().optional(),
@@ -37,6 +39,7 @@ export const IngredientSchema = z.object({
   category: z.string().nullable(),
   image: z.string(),
   isActive: z.boolean(),
+  unit: z.string(),
   countDishUsed: z.number().optional(),
   createdAt: z.date(),
   updatedAt: z.date()

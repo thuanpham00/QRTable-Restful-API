@@ -395,7 +395,7 @@ export const createPayment = async (body: CreatePaymentBodyType, accountId: numb
       note,
       createdById: accountId,
       orders: {
-        connect: orderIds.map((id) => ({ id }))
+        connect: orderIds.map((id) => ({ id })) // dùng connect để liên kết với orders đã tồn tại thông qua paymentId
       }
     }
   })

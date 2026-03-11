@@ -232,6 +232,7 @@ model Ingredient {
   id              Int               @id @default(autoincrement())
   name            String            @unique // "Thịt bò"
   description     String?
+  unit            String            @default("kg") // ĐƠN VỊ CƠ BẢN: "kg", "liter", "piece"
   allergenType    String?           // các chất gây dị ứng "dairy,gluten,shellfish,nuts"
   isVegetarian    Boolean           @default(false) // chế độ chay
   isVegan         Boolean           @default(false) // chế độ thuần chay
@@ -256,7 +257,6 @@ model DishIngredient {
   ingredientId Int
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
   quantity     String?    // số lượng "200", "2"
-  unit         String?    // đơn vị "grams", "pieces"
   isOptional   Boolean    @default(false) // Có thể bỏ qua
   isMain       Boolean    @default(false) // Nguyên liệu chính
   createdAt    DateTime   @default(now())
@@ -597,6 +597,7 @@ model InventoryBatch {
   batchNumber      String
   quantity         Float    // Số lượng còn lại trong lô
   unitPrice        Float    // Giá nhập của lô này
+  status           String   @default("Available") // Available | Low | Empty | Expired
   
   importDate       DateTime
   expiryDate       DateTime?
@@ -609,4 +610,5 @@ model InventoryBatch {
   @@index([inventoryStockId])
   @@index([expiryDate])
   @@index([batchNumber])
+  @@index([status])
 }

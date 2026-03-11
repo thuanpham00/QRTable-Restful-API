@@ -182,6 +182,19 @@
     "updatedAt": "2026-01-30T15:05:39.284Z"
   },
   {
+    "id": 86,
+    "name": "Dầu chiên",
+    "description": "",
+    "allergenType": "",
+    "isVegetarian": true,
+    "isVegan": true,
+    "category": "gia-vi",
+    "image": "http://localhost:4000/static/58fa8af7efc244f0a18bb6ef6fa063bd.jpg",
+    "isActive": true,
+    "createdAt": "2026-03-10T16:53:41.292Z",
+    "updatedAt": "2026-03-10T16:53:41.292Z"
+  },
+  {
     "id": 46,
     "name": "Giá đỗ",
     "description": "Giá đỗ tươi",

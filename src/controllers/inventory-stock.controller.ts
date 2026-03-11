@@ -1,9 +1,5 @@
 import prisma from '@/database'
-import {
-  CreateInventoryStockBodyType,
-  InventoryStockQueryType,
-  UpdateInventoryStockBodyType
-} from '@/schemaValidations/inventory-stock.schema'
+import { InventoryStockQueryType, UpdateInventoryStockBodyType } from '@/schemaValidations/inventory-stock.schema'
 
 export const getInventoryStockList = async ({ page, limit, ingredientName, lowStock }: InventoryStockQueryType) => {
   // Lấy tất cả stocks (sẽ filter sau)
@@ -14,7 +10,8 @@ export const getInventoryStockList = async ({ page, limit, ingredientName, lowSt
         select: {
           name: true,
           category: true,
-          image: true
+          image: true,
+          unit: true
         }
       },
       _count: {
@@ -37,6 +34,7 @@ export const getInventoryStockList = async ({ page, limit, ingredientName, lowSt
     updatedAt: stock.updatedAt,
     ingredientName: stock.ingredient.name,
     ingredientCategory: stock.ingredient.category,
+    ingredientUnit: stock.ingredient.unit,
     ingredientImage: stock.ingredient.image,
     batchCount: stock._count.batches
   }))
@@ -68,6 +66,46 @@ export const getInventoryStockList = async ({ page, limit, ingredientName, lowSt
   }
 }
 
+export const getInventoryStockListNoPagination = async () => {
+  const allStocks = await prisma.inventoryStock.findMany({
+    orderBy: { updatedAt: 'desc' },
+    include: {
+      ingredient: {
+        select: {
+          name: true,
+          category: true,
+          image: true
+        }
+      },
+      _count: {
+        select: { batches: true }
+      }
+    }
+  })
+
+  // Map data để thêm thông tin ingredient
+  const stocksWithInfo = allStocks.map((stock) => ({
+    id: stock.id,
+    ingredientId: stock.ingredientId,
+    quantity: stock.quantity,
+    minStock: stock.minStock,
+    maxStock: stock.maxStock,
+    avgUnitPrice: stock.avgUnitPrice,
+    totalValue: stock.totalValue,
+    lastImport: stock.lastImport,
+    lastExport: stock.lastExport,
+    updatedAt: stock.updatedAt,
+    ingredientName: stock.ingredient.name,
+    ingredientCategory: stock.ingredient.category,
+    ingredientImage: stock.ingredient.image,
+    batchCount: stock._count.batches
+  }))
+
+  return {
+    data: stocksWithInfo
+  }
+}
+
 export const getInventoryStockDetail = async (id: number) => {
   const stock = await prisma.inventoryStock.findUniqueOrThrow({
     where: {
@@ -77,7 +115,8 @@ export const getInventoryStockDetail = async (id: number) => {
       ingredient: {
         select: {
           name: true,
-          category: true
+          category: true,
+          image: true
         }
       },
       batches: {
@@ -104,40 +143,10 @@ export const getInventoryStockDetail = async (id: number) => {
     updatedAt: stock.updatedAt,
     ingredientName: stock.ingredient.name,
     ingredientCategory: stock.ingredient.category,
+    ingredientImage: stock.ingredient.image,
     batchCount: stock._count.batches,
     batches: stock.batches
   }
-}
-
-export const createInventoryStock = async (data: CreateInventoryStockBodyType) => {
-  // Kiểm tra ingredientId đã có InventoryStock chưa
-  const existingStock = await prisma.inventoryStock.findUnique({
-    where: {
-      ingredientId: data.ingredientId
-    }
-  })
-
-  if (existingStock) {
-    throw new Error(`Nguyên liệu này đã có tồn kho (ID: ${existingStock.id})`)
-  }
-
-  // Kiểm tra ingredient có tồn tại không
-  await prisma.ingredient.findUniqueOrThrow({
-    where: {
-      id: data.ingredientId
-    }
-  })
-
-  return prisma.inventoryStock.create({
-    data: {
-      ingredientId: data.ingredientId,
-      quantity: data.quantity || 0,
-      minStock: data.minStock || null,
-      maxStock: data.maxStock || null,
-      avgUnitPrice: data.avgUnitPrice || 0,
-      totalValue: data.totalValue || 0
-    }
-  })
 }
 
 export const updateInventoryStock = async (id: number, data: UpdateInventoryStockBodyType) => {
@@ -146,29 +155,12 @@ export const updateInventoryStock = async (id: number, data: UpdateInventoryStoc
     where: { id }
   })
 
+  // Chỉ cho phép update minStock và maxStock (ngưỡng cảnh báo)
   return prisma.inventoryStock.update({
-    where: {
-      id
-    },
-    data
-  })
-}
-
-export const deleteInventoryStock = async (id: number) => {
-  // Kiểm tra có batches nào không
-  const batchCount = await prisma.inventoryBatch.count({
-    where: {
-      inventoryStockId: id
-    }
-  })
-
-  if (batchCount > 0) {
-    throw new Error(`Không thể xóa tồn kho này vì còn ${batchCount} lô hàng`)
-  }
-
-  return prisma.inventoryStock.delete({
-    where: {
-      id
+    where: { id },
+    data: {
+      minStock: data.minStock,
+      maxStock: data.maxStock
     }
   })
 }

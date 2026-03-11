@@ -1,14 +1,13 @@
 import {
-  createInventoryStock,
-  deleteInventoryStock,
   getInventoryStockDetail,
   getInventoryStockList,
+  getInventoryStockListNoPagination,
   updateInventoryStock
 } from '@/controllers/inventory-stock.controller'
 import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
-  CreateInventoryStockBody,
-  CreateInventoryStockBodyType,
+  InventoryStockListNoPaginationRes,
+  InventoryStockListNoPaginationResType,
   InventoryStockListRes,
   InventoryStockListResType,
   InventoryStockParams,
@@ -59,6 +58,27 @@ export default async function inventoryStockRoutes(fastify: FastifyInstance, opt
     }
   )
 
+  // GET /inventory-stocks/all - Lấy danh sách tồn kho - không phân trang
+  fastify.get<{
+    Reply: InventoryStockListNoPaginationResType
+  }>(
+    '/all',
+    {
+      schema: {
+        response: {
+          200: InventoryStockListNoPaginationRes
+        }
+      }
+    },
+    async (request, reply) => {
+      const { data } = await getInventoryStockListNoPagination()
+      reply.send({
+        data: data as InventoryStockListResType['data'],
+        message: 'Lấy danh sách tồn kho thành công!'
+      })
+    }
+  )
+
   // GET /inventory-stocks/:id - Lấy chi tiết tồn kho
   fastify.get<{
     Params: InventoryStockParamsType
@@ -78,29 +98,6 @@ export default async function inventoryStockRoutes(fastify: FastifyInstance, opt
       reply.send({
         data: stock as InventoryStockResType['data'],
         message: 'Lấy thông tin tồn kho thành công!'
-      })
-    }
-  )
-
-  // POST /inventory-stocks - Tạo tồn kho mới
-  fastify.post<{
-    Body: CreateInventoryStockBodyType
-    Reply: InventoryStockResType
-  }>(
-    '/',
-    {
-      schema: {
-        body: CreateInventoryStockBody,
-        response: {
-          200: InventoryStockRes
-        }
-      }
-    },
-    async (request, reply) => {
-      const stock = await createInventoryStock(request.body)
-      reply.send({
-        data: stock as InventoryStockResType['data'],
-        message: 'Tạo tồn kho thành công!'
       })
     }
   )
@@ -125,31 +122,11 @@ export default async function inventoryStockRoutes(fastify: FastifyInstance, opt
       const stock = await updateInventoryStock(request.params.id, request.body)
       reply.send({
         data: stock as InventoryStockResType['data'],
-        message: 'Cập nhật tồn kho thành công!'
+        message: 'Cập nhật ngưỡng cảnh báo tồn kho thành công!'
       })
     }
   )
 
-  // DELETE /inventory-stocks/:id - Xóa tồn kho
-  fastify.delete<{
-    Params: InventoryStockParamsType
-    Reply: InventoryStockResType
-  }>(
-    '/:id',
-    {
-      schema: {
-        params: InventoryStockParams,
-        response: {
-          200: InventoryStockRes
-        }
-      }
-    },
-    async (request, reply) => {
-      const result = await deleteInventoryStock(request.params.id)
-      reply.send({
-        message: 'Xóa tồn kho thành công!',
-        data: result as InventoryStockResType['data']
-      })
-    }
-  )
+  // POST đã bị loại bỏ - InventoryStock tự động tạo khi tạo Ingredient (transaction)
+  // DELETE đã bị loại bỏ - InventoryStock tự động xóa khi xóa Ingredient (cascade)
 }

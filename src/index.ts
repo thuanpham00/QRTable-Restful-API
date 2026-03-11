@@ -34,6 +34,10 @@ import geminiRoutes from '@/routes/gemini.route'
 import supplierRoutes from '@/routes/supplier.route'
 import suppliesRoutes from '@/routes/supply.route'
 import inventoryStockRoutes from '@/routes/inventory-stocks.route'
+import startBatchStatusCronJob from '@/jobs/startBatchStatus.job'
+import inventoryBatchRoutes from '@/routes/inventory-batch.route'
+import exportReceiptRoutes from '@/routes/export-receipts.route'
+import importReceiptRoutes from '@/routes/import-receipts.route'
 
 const fastify = Fastify({
   logger: false
@@ -70,6 +74,7 @@ const start = async () => {
 
     autoRemoveRefreshTokenJob() // tự động xóa refresh token sau mỗi giờ
     autoRotateTableTokenJob(fastify) // tự động changeToken cho bàn sau 10 phút 1 lần
+    startBatchStatusCronJob() // Cập nhật status lô hàng mỗi ngày lúc 00:00
 
     fastify.register(authRoutes, {
       prefix: '/auth'
@@ -130,6 +135,15 @@ const start = async () => {
     })
     fastify.register(inventoryStockRoutes, {
       prefix: '/inventory-stocks'
+    })
+    fastify.register(inventoryBatchRoutes, {
+      prefix: '/inventory-batches'
+    })
+    fastify.register(exportReceiptRoutes, {
+      prefix: '/export-receipts'
+    })
+    fastify.register(importReceiptRoutes, {
+      prefix: '/import-receipts'
     })
     await initOwnerAccount()
     await fastify.listen({

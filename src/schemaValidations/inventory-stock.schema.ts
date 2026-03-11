@@ -10,18 +10,6 @@ export const InventoryStockQuery = BaseQuery.and(
 
 export type InventoryStockQueryType = z.TypeOf<typeof InventoryStockQuery>
 
-export const InventoryBatchSchema = z.object({
-  id: z.number(),
-  inventoryStockId: z.number(),
-  batchNumber: z.string(),
-  quantity: z.number(),
-  unitPrice: z.number(),
-  importDate: z.date(),
-  expiryDate: z.date().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date()
-})
-
 export const InventoryStockSchema = z.object({
   id: z.number(),
   ingredientId: z.number(),
@@ -34,10 +22,10 @@ export const InventoryStockSchema = z.object({
   lastExport: z.date().nullable(),
   updatedAt: z.date(),
   ingredientName: z.string().optional(),
-  ingredientCategory: z.string().nullable().optional(),
-  ingredientImage: z.string().nullable().optional(),
-  batchCount: z.number().optional(),
-  batches: z.array(InventoryBatchSchema).optional()
+  ingredientCategory: z.string().optional(),
+  ingredientImage: z.string().optional(),
+  ingredientUnit: z.string().optional(),
+  batchCount: z.number().optional()
 })
 
 export const InventoryStockRes = z.object({
@@ -55,23 +43,17 @@ export const InventoryStockListRes = z.object({
 
 export type InventoryStockListResType = z.TypeOf<typeof InventoryStockListRes>
 
-export const CreateInventoryStockBody = z.object({
-  ingredientId: z.number(),
-  quantity: z.number().min(0).default(0),
-  minStock: z.number().min(0).optional(),
-  maxStock: z.number().min(0).optional(),
-  avgUnitPrice: z.number().min(0).default(0),
-  totalValue: z.number().min(0).default(0)
+export const InventoryStockListNoPaginationRes = z.object({
+  data: z.array(InventoryStockSchema),
+  message: z.string()
 })
 
-export type CreateInventoryStockBodyType = z.TypeOf<typeof CreateInventoryStockBody>
+export type InventoryStockListNoPaginationResType = z.TypeOf<typeof InventoryStockListNoPaginationRes>
 
 export const UpdateInventoryStockBody = z.object({
-  quantity: z.number().min(0).optional(),
-  minStock: z.number().min(0).optional(),
-  maxStock: z.number().min(0).optional(),
-  avgUnitPrice: z.number().min(0).optional(),
-  totalValue: z.number().min(0).optional()
+  minStock: z.number().min(0).nullable().optional(),
+  maxStock: z.number().min(0).nullable().optional()
+  // Chỉ cho phép update ngưỡng cảnh báo
 })
 
 export type UpdateInventoryStockBodyType = z.TypeOf<typeof UpdateInventoryStockBody>

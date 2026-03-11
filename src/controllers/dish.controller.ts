@@ -164,18 +164,44 @@ export const getIngredientDishList = async (dishId: number) => {
     },
     orderBy: { createdAt: 'desc' }
   })
-  return data
+  const dataRes = data.map((item) => ({
+    id: item.id,
+    dishId: item.dishId,
+    ingredientId: item.ingredientId,
+    ingredient: item.ingredient,
+    quantity: item.quantity,
+    unit: item.ingredient.unit, // Lấy đơn vị từ bảng Ingredient
+    isOptional: item.isOptional,
+    isMain: item.isMain,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt
+  }))
+  return dataRes
 }
 
-export const getDishIngredientDetail = (id: number) => {
-  return prisma.dishIngredient.findUniqueOrThrow({
+export const getDishIngredientDetail = async (id: number) => {
+  const data = await prisma.dishIngredient.findUniqueOrThrow({
     where: { id },
     include: { ingredient: true }
   })
+
+  const dataRes = {
+    id: data.id,
+    dishId: data.dishId,
+    ingredientId: data.ingredientId,
+    ingredient: data.ingredient,
+    quantity: data.quantity,
+    unit: data.ingredient.unit, // Lấy đơn vị từ bảng Ingredient
+    isOptional: data.isOptional,
+    isMain: data.isMain,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt
+  }
+  return dataRes
 }
 
 export const addIngredientToDish = async (body: AddIngredientToDishType) => {
-  const { dishId, ingredientId, quantity, unit, isOptional = false, isMain = false } = body
+  const { dishId, ingredientId, quantity, isOptional = false, isMain = false } = body
 
   const dish = await prisma.dish.findUnique({ where: { id: dishId } })
   if (!dish) throw new Error('Món ăn không tồn tại')
@@ -190,14 +216,12 @@ export const addIngredientToDish = async (body: AddIngredientToDishType) => {
       dishId,
       ingredientId,
       quantity: String(quantity),
-      unit: unit || null,
       isOptional,
       isMain
     },
     update: {
       // if exists, update values
       quantity: String(quantity),
-      unit: unit || null,
       isOptional,
       isMain
     },
@@ -211,7 +235,7 @@ export const updateIngredientToDish = async (id: number, body: UpdateIngredientI
   const exist = await prisma.dishIngredient.findUnique({ where: { id } })
   if (!exist) throw new Error('Liên kết nguyên liệu - món ăn không tồn tại')
 
-  const { ingredientId, quantity, unit, isOptional = false, isMain = false } = body
+  const { ingredientId, quantity, isOptional = false, isMain = false } = body
 
   // if changing ingredient, ensure target ingredient exists and no duplicate on same dish
   if (ingredientId && ingredientId !== exist.ingredientId) {
@@ -229,7 +253,6 @@ export const updateIngredientToDish = async (id: number, body: UpdateIngredientI
     data: {
       ingredientId: ingredientId || undefined,
       quantity: quantity !== undefined ? String(quantity) : undefined,
-      unit: unit !== undefined ? unit : undefined,
       isOptional,
       isMain
     },

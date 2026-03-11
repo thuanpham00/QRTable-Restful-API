@@ -49,6 +49,7 @@ export default async function ingredientRoutes(fastify: FastifyInstance, options
         limit: request.query.limit || 10,
         name: request.query.name,
         category: request.query.category,
+        unit: request.query.unit,
         pagination: request.query.pagination
       })
       reply.send({

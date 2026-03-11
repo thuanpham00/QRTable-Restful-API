@@ -1,6 +1,7 @@
 import { DishStatus, MenuItemStatus, OrderStatus, TableStatus } from '@/constants/type'
 import prisma from '@/database'
 import { CreateOrdersBodyType, UpdateOrderBodyType } from '@/schemaValidations/order.schema'
+import { exportIngredientFIFO, generateExportReceiptCode } from '@/utils/inventory-export.utils'
 
 export const createOrdersController = async (orderHandlerId: number, body: CreateOrdersBodyType) => {
   const { guestId, orders } = body
@@ -279,9 +280,83 @@ export const updateOrderController = async (
       }
     })
 
+    if (!order.dishSnapshot.menuItemId) {
+      throw new Error('Không tìm thấy thông tin menuItem từ dishSnapshot')
+    }
+
     // Không cho phép cập nhật order đã bị từ chối
     if (order.status === OrderStatus.Rejected) {
       throw new Error('Không thể cập nhật đơn hàng đã bị từ chối')
+    }
+
+    // Nếu món ăn từ "Pending" -> "Processing": Check nguyên liệu và tạo phiếu xuất kho
+    if (order.status === OrderStatus.Pending && status === OrderStatus.Processing) {
+      const menuItem = await tx.menuItem.findFirstOrThrow({
+        where: { id: order.dishSnapshot.menuItemId },
+        include: {
+          dish: {
+            include: {
+              dishIngredients: {
+                include: {
+                  ingredient: true
+                }
+              }
+            }
+          }
+        }
+      })
+
+      const dishIngredients = menuItem.dish.dishIngredients
+
+      if (dishIngredients.length === 0) {
+        // Món ăn không có nguyên liệu - bỏ qua xuất kho
+        console.warn(`Món ${menuItem.dish.name} không có nguyên liệu`)
+      } else {
+        // 1. Tính tổng nguyên liệu cần xuất (quantity * số phần order)
+        const ingredientUsage = new Map<number, { quantity: number; ingredientName: string; ingredientUnit: string }>()
+
+        for (const di of dishIngredients) {
+          const qtyPerDish = parseFloat(di.quantity || '0')
+          if (qtyPerDish <= 0) continue
+
+          const totalQty = qtyPerDish * order.quantity
+
+          ingredientUsage.set(di.ingredientId, {
+            quantity: totalQty,
+            ingredientName: di.ingredient.name,
+            ingredientUnit: di.ingredient.unit
+          })
+        }
+
+        // 3. Tạo ExportReceipt
+        const exportCode = await generateExportReceiptCode(tx)
+        const exportReceipt = await tx.exportReceipt.create({
+          data: {
+            code: exportCode,
+            exportType: 'Production', // Xuất để sản xuất món ăn
+            status: 'Completed',
+            relatedOrderId: order.id,
+            createdBy: orderHandlerId,
+            note: `Xuất kho cho Order #${order.id} - ${menuItem.dish.name} x${order.quantity}`,
+            totalAmount: 0 // Sẽ cập nhật sau
+          }
+        })
+
+        // 4. Xuất từng nguyên liệu theo FIFO
+        let totalExportValue = 0
+
+        for (const [ingredientId, usage] of ingredientUsage) {
+          const result = await exportIngredientFIFO(tx, exportReceipt.id, ingredientId, usage.quantity)
+
+          totalExportValue += result.totalValue
+        }
+
+        // 5. Cập nhật totalAmount cho ExportReceipt
+        await tx.exportReceipt.update({
+          where: { id: exportReceipt.id },
+          data: { totalAmount: totalExportValue }
+        })
+      }
     }
 
     let dishSnapshotId = order.dishSnapshotId

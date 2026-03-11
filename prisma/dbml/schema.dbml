@@ -193,6 +193,7 @@ Table Ingredient {
   id Int [pk, increment]
   name String [unique, not null]
   description String
+  unit String [not null, default: 'kg']
   allergenType String
   isVegetarian Boolean [not null, default: false]
   isVegan Boolean [not null, default: false]
@@ -214,7 +215,6 @@ Table DishIngredient {
   ingredientId Int [not null]
   ingredient Ingredient [not null]
   quantity String
-  unit String
   isOptional Boolean [not null, default: false]
   isMain Boolean [not null, default: false]
   createdAt DateTime [default: `now()`, not null]
@@ -444,6 +444,7 @@ Table InventoryBatch {
   batchNumber String [not null]
   quantity Float [not null]
   unitPrice Float [not null]
+  status String [not null, default: 'Available']
   importDate DateTime [not null]
   expiryDate DateTime
   createdAt DateTime [default: `now()`, not null]
