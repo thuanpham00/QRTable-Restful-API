@@ -131,7 +131,79 @@ export const DashboardIndicatorRes = z.object({
 
     // Dish indicators
     topDishesByQuantity: z.array(DishWithStatsSchema),
-    topDishesByRevenue: z.array(DishWithStatsSchema)
+    topDishesByRevenue: z.array(DishWithStatsSchema),
+
+    // Inventory Analytics
+    inventoryAnalytics: z.object({
+      overview: z.object({
+        totalValue: z.number(),
+        lowStockCount: z.number(),
+        outOfStockCount: z.number(),
+        expiringSoonCount: z.number()
+      }),
+      batchStatus: z.object({
+        Available: z.number(),
+        Low: z.number(),
+        Empty: z.number(),
+        Expired: z.number()
+      }),
+      importAnalytics: z.object({
+        totalReceipts: z.number(),
+        totalValue: z.number(),
+        totalQuantity: z.number(),
+        avgReceiptValue: z.number(),
+        topSuppliers: z.array(
+          z.object({
+            supplierId: z.number(),
+            supplierName: z.string(),
+            receiptCount: z.number(),
+            totalAmount: z.number()
+          })
+        )
+      }),
+      exportAnalytics: z.object({
+        totalReceipts: z.number(),
+        totalValue: z.number(),
+        exportByType: z.array(
+          z.object({
+            type: z.string(),
+            count: z.number(),
+            totalAmount: z.number()
+          })
+        ),
+        topIngredientsByUsage: z.array(
+          z.object({
+            ingredientId: z.number(),
+            ingredientName: z.string(),
+            ingredientUnit: z.string(),
+            totalQuantity: z.number(),
+            totalValue: z.number()
+          })
+        )
+      }),
+      alerts: z.object({
+        lowStockItems: z.array(
+          z.object({
+            ingredientId: z.number(),
+            ingredientName: z.string(),
+            currentQuantity: z.number(),
+            minStock: z.number().nullable(),
+            unit: z.string(),
+            stockLevel: z.number()
+          })
+        ),
+        expiringSoonBatches: z.array(
+          z.object({
+            batchNumber: z.string(),
+            ingredientName: z.string(),
+            quantity: z.number(),
+            unit: z.string(),
+            expiryDate: z.date().nullable(),
+            daysUntilExpiry: z.number()
+          })
+        )
+      })
+    })
   }),
   message: z.string()
 })

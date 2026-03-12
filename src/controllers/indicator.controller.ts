@@ -5,68 +5,103 @@ import { formatInTimeZone } from 'date-fns-tz'
 
 export const dashboardIndicatorController = async ({ fromDate, toDate }: { fromDate: Date; toDate: Date }) => {
   // Query data cần thiết
-  const [completedSessions, activeSessions, dishes, categories, allGuests, totalTables, individualPayments] =
-    await Promise.all([
-      // 1. Sessions đã kết thúc trong khoảng thời gian
-      prisma.tableSession.findMany({
-        where: {
-          status: 'Completed',
-          endTime: {
-            gte: fromDate,
-            lte: toDate
-          }
-        },
-        include: {
-          orders: {
-            include: {
-              dishSnapshot: {
-                include: {
-                  menuItem: {
-                    include: {
-                      dish: {
-                        include: {
-                          category: true
-                        }
+  const [
+    completedSessions,
+    activeSessions,
+    dishes,
+    categories,
+    allGuests,
+    totalTables,
+    individualPayments,
+    inventoryStocks,
+    importReceipts,
+    exportReceipts,
+    allBatches
+  ] = await Promise.all([
+    // 1. Sessions đã kết thúc trong khoảng thời gian
+    prisma.tableSession.findMany({
+      where: {
+        status: 'Completed',
+        endTime: {
+          gte: fromDate,
+          lte: toDate
+        }
+      },
+      include: {
+        orders: {
+          include: {
+            dishSnapshot: {
+              include: {
+                menuItem: {
+                  include: {
+                    dish: {
+                      include: {
+                        category: true
                       }
                     }
                   }
                 }
               }
             }
-          },
-          guests: true,
-          paymentGroups: {
-            include: {
-              payments: true
-            }
           }
-        }
-      }),
-      // 2. Sessions đang active
-      prisma.tableSession.findMany({
-        where: {
-          status: 'Active'
-        }
-      }),
-      // 3. Danh sách món ăn với category
-      prisma.dish.findMany({
-        where: {
-          categoryId: { not: null }
         },
-        include: {
-          category: {
-            select: {
-              id: true,
-              name: true
-            }
+        guests: true,
+        paymentGroups: {
+          include: {
+            payments: true
           }
         }
-      }),
-      // 4. Categories
-      prisma.dishCategory.findMany(),
-      // 5. All guests có orders trong khoảng thời gian
-      prisma.guest.findMany({
-        where: {
+      }
+    }),
+    // 2. Sessions đang active
+    prisma.tableSession.findMany({
+      where: {
+        status: 'Active'
+      }
+    }),
+    // 3. Danh sách món ăn với category
+    prisma.dish.findMany({
+      where: {
+        categoryId: { not: null }
+      },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    }),
+    // 4. Categories
+    prisma.dishCategory.findMany(),
+    // 5. All guests có orders trong khoảng thời gian
+    prisma.guest.findMany({
+      where: {
+        tableSession: {
+          status: 'Completed',
+          endTime: {
+            gte: fromDate,
+            lte: toDate
+          }
+        }
+      },
+      include: {
+        orders: {
+          where: {
+            status: OrderStatus.Paid
+          }
+        }
+      }
+    }),
+    // 6. Total tables
+    prisma.table.count(),
+    // 7. Individual payments (không thuộc PaymentGroup)
+    prisma.payment.findMany({
+      where: {
+        paymentGroupId: null,
+        status: 'Paid',
+        guest: {
           tableSession: {
             status: 'Completed',
             endTime: {
@@ -74,34 +109,86 @@ export const dashboardIndicatorController = async ({ fromDate, toDate }: { fromD
               lte: toDate
             }
           }
+        }
+      }
+    }),
+    // 8. Inventory Stocks với ingredient info
+    prisma.inventoryStock.findMany({
+      include: {
+        ingredient: {
+          select: {
+            id: true,
+            name: true,
+            unit: true,
+            category: true
+          }
         },
-        include: {
-          orders: {
-            where: {
-              status: OrderStatus.Paid
-            }
+        batches: {
+          where: {
+            quantity: { gt: 0 }
           }
         }
-      }),
-      // 6. Total tables
-      prisma.table.count(),
-      // 7. Individual payments (không thuộc PaymentGroup)
-      prisma.payment.findMany({
-        where: {
-          paymentGroupId: null,
-          status: 'Paid',
-          guest: {
-            tableSession: {
-              status: 'Completed',
-              endTime: {
-                gte: fromDate,
-                lte: toDate
+      }
+    }),
+    // 9. Import Receipts trong khoảng thời gian
+    prisma.importReceipt.findMany({
+      where: {
+        importDate: {
+          gte: fromDate,
+          lte: toDate
+        },
+        status: 'Completed'
+      },
+      include: {
+        items: true,
+        supplier: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    }),
+    // 10. Export Receipts trong khoảng thời gian
+    prisma.exportReceipt.findMany({
+      where: {
+        exportDate: {
+          gte: fromDate,
+          lte: toDate
+        },
+        status: 'Completed'
+      },
+      include: {
+        items: {
+          include: {
+            ingredient: {
+              select: {
+                id: true,
+                name: true,
+                unit: true
               }
             }
           }
         }
-      })
-    ])
+      }
+    }),
+    // 11. All Batches để phân tích status
+    prisma.inventoryBatch.findMany({
+      include: {
+        inventoryStock: {
+          include: {
+            ingredient: {
+              select: {
+                id: true,
+                name: true,
+                unit: true
+              }
+            }
+          }
+        }
+      }
+    })
+  ])
 
   // Khởi tạo biến thống kê
   let revenue = 0
@@ -371,6 +458,168 @@ export const dashboardIndicatorController = async ({ fromDate, toDate }: { fromD
   const topDishesByQuantity = [...dishIndicator].sort((a, b) => b.successOrders - a.successOrders).slice(0, 10)
   const topDishesByRevenue = [...dishIndicator].sort((a, b) => b.revenue - a.revenue).slice(0, 10)
 
+  // ============ INVENTORY ANALYTICS ============
+  let totalInventoryValue = 0
+  let lowStockCount = 0
+  let outOfStockCount = 0
+  let expiringSoonCount = 0
+  const batchStatusCount = {
+    Available: 0,
+    Low: 0,
+    Empty: 0,
+    Expired: 0
+  }
+
+  const thirtyDaysFromNow = new Date()
+  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
+
+  // Process inventory stocks
+  inventoryStocks.forEach((stock) => {
+    totalInventoryValue += stock.totalValue
+
+    // Check low stock
+    if (stock.minStock && stock.quantity < stock.minStock) {
+      lowStockCount++
+    }
+
+    // Check out of stock
+    if (stock.quantity === 0) {
+      outOfStockCount++
+    }
+  })
+
+  // Process batches
+  allBatches.forEach((batch) => {
+    // Count batch status
+    if (batch.status in batchStatusCount) {
+      batchStatusCount[batch.status as keyof typeof batchStatusCount]++
+    }
+
+    // Check expiring soon
+    if (batch.expiryDate && batch.expiryDate <= thirtyDaysFromNow && batch.expiryDate > new Date()) {
+      expiringSoonCount++
+    }
+  })
+
+  // Import/Export Analytics
+  let totalImportValue = 0
+  let totalImportQuantity = 0
+  const importBySupplierObj: Record<
+    number,
+    {
+      supplierId: number
+      supplierName: string
+      receiptCount: number
+      totalAmount: number
+    }
+  > = {}
+
+  importReceipts.forEach((receipt) => {
+    totalImportValue += receipt.totalAmount
+    totalImportQuantity += receipt.items.reduce((sum, item) => sum + item.quantity, 0)
+
+    // Group by supplier
+    if (!importBySupplierObj[receipt.supplierId]) {
+      importBySupplierObj[receipt.supplierId] = {
+        supplierId: receipt.supplierId,
+        supplierName: receipt.supplier.name,
+        receiptCount: 0,
+        totalAmount: 0
+      }
+    }
+    importBySupplierObj[receipt.supplierId].receiptCount++
+    importBySupplierObj[receipt.supplierId].totalAmount += receipt.totalAmount
+  })
+
+  const topSuppliersByValue = Object.values(importBySupplierObj)
+    .sort((a, b) => b.totalAmount - a.totalAmount)
+    .slice(0, 5)
+
+  // Export Analytics
+  let totalExportValue = 0
+  const exportByTypeObj: Record<
+    string,
+    {
+      type: string
+      count: number
+      totalAmount: number
+    }
+  > = {}
+
+  const ingredientUsageObj: Record<
+    number,
+    {
+      ingredientId: number
+      ingredientName: string
+      ingredientUnit: string
+      totalQuantity: number
+      totalValue: number
+    }
+  > = {}
+
+  exportReceipts.forEach((receipt) => {
+    totalExportValue += receipt.totalAmount
+
+    // Group by export type
+    if (!exportByTypeObj[receipt.exportType]) {
+      exportByTypeObj[receipt.exportType] = {
+        type: receipt.exportType,
+        count: 0,
+        totalAmount: 0
+      }
+    }
+    exportByTypeObj[receipt.exportType].count++
+    exportByTypeObj[receipt.exportType].totalAmount += receipt.totalAmount
+
+    // Ingredient usage
+    receipt.items.forEach((item) => {
+      if (!ingredientUsageObj[item.ingredientId]) {
+        ingredientUsageObj[item.ingredientId] = {
+          ingredientId: item.ingredientId,
+          ingredientName: item.ingredient.name,
+          ingredientUnit: item.ingredient.unit,
+          totalQuantity: 0,
+          totalValue: 0
+        }
+      }
+      ingredientUsageObj[item.ingredientId].totalQuantity += item.quantity
+      ingredientUsageObj[item.ingredientId].totalValue += item.totalPrice
+    })
+  })
+
+  const topIngredientsByUsage = Object.values(ingredientUsageObj)
+    .sort((a, b) => b.totalValue - a.totalValue)
+    .slice(0, 10)
+
+  // Stock alerts
+  const lowStockItems = inventoryStocks
+    .filter((stock) => stock.minStock && stock.quantity < stock.minStock)
+    .map((stock) => ({
+      ingredientId: stock.ingredient.id,
+      ingredientName: stock.ingredient.name,
+      currentQuantity: stock.quantity,
+      minStock: stock.minStock,
+      unit: stock.ingredient.unit,
+      stockLevel: stock.minStock ? (stock.quantity / stock.minStock) * 100 : 0
+    }))
+    .sort((a, b) => a.stockLevel - b.stockLevel)
+    .slice(0, 10)
+
+  const expiringSoonBatches = allBatches
+    .filter((batch) => batch.expiryDate && batch.expiryDate <= thirtyDaysFromNow && batch.expiryDate > new Date())
+    .map((batch) => ({
+      batchNumber: batch.batchNumber,
+      ingredientName: batch.inventoryStock.ingredient.name,
+      quantity: batch.quantity,
+      unit: batch.inventoryStock.ingredient.unit,
+      expiryDate: batch.expiryDate,
+      daysUntilExpiry: batch.expiryDate
+        ? Math.ceil((batch.expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+        : 0
+    }))
+    .sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry)
+    .slice(0, 10)
+
   return {
     // Basic metrics
     revenue,
@@ -452,6 +701,34 @@ export const dashboardIndicatorController = async ({ fromDate, toDate }: { fromD
 
     // Dish indicators
     topDishesByQuantity,
-    topDishesByRevenue
+    topDishesByRevenue,
+
+    // Inventory Analytics
+    inventoryAnalytics: {
+      overview: {
+        totalValue: Math.round(totalInventoryValue),
+        lowStockCount,
+        outOfStockCount,
+        expiringSoonCount
+      },
+      batchStatus: batchStatusCount,
+      importAnalytics: {
+        totalReceipts: importReceipts.length,
+        totalValue: Math.round(totalImportValue),
+        totalQuantity: Math.round(totalImportQuantity),
+        avgReceiptValue: importReceipts.length > 0 ? Math.round(totalImportValue / importReceipts.length) : 0,
+        topSuppliers: topSuppliersByValue
+      },
+      exportAnalytics: {
+        totalReceipts: exportReceipts.length,
+        totalValue: Math.round(totalExportValue),
+        exportByType: Object.values(exportByTypeObj),
+        topIngredientsByUsage
+      },
+      alerts: {
+        lowStockItems,
+        expiringSoonBatches
+      }
+    }
   }
 }
