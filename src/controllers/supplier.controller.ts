@@ -6,6 +6,25 @@ import {
   UpdateSupplierBodyType
 } from '@/schemaValidations/supplier.schema'
 
+/**
+ * Lấy danh sách nhà cung cấp đơn giản (id, name) - Dùng cho dropdown/select
+ * Không phân trang, chỉ trả về Active suppliers
+ */
+export const getSupplierOptions = async () => {
+  const suppliers = await prisma.supplier.findMany({
+    where: {
+      status: 'Active'
+    },
+    select: {
+      id: true,
+      name: true
+    },
+    orderBy: { name: 'asc' }
+  })
+
+  return suppliers
+}
+
 export const getSupplierList = async ({ page, limit, name, status }: SupplierQueryType) => {
   const suppliers = await prisma.supplier.findMany({
     orderBy: { createdAt: 'desc' },

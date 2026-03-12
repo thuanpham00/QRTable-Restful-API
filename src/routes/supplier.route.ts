@@ -3,6 +3,7 @@ import {
   deleteSupplier,
   getSupplierDetail,
   getSupplierList,
+  getSupplierOptions,
   updateSupplier
 } from '@/controllers/supplier.controller'
 import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
@@ -11,6 +12,8 @@ import {
   CreateSupplierBodyType,
   SupplierListRes,
   SupplierListResType,
+  SupplierOptionsRes,
+  SupplierOptionsResType,
   SupplierParams,
   SupplierParamsType,
   SupplierQuery,
@@ -53,6 +56,27 @@ export default async function supplierRoutes(fastify: FastifyInstance, options: 
       reply.send({
         data: data as SupplierListResType['data'],
         pagination: pagination,
+        message: 'Lấy danh sách nhà cung cấp thành công!'
+      })
+    }
+  )
+
+  // GET /suppliers/options - Lấy danh sách đơn giản (id, name) cho dropdown
+  fastify.get<{
+    Reply: SupplierOptionsResType
+  }>(
+    '/options',
+    {
+      schema: {
+        response: {
+          200: SupplierOptionsRes
+        }
+      }
+    },
+    async (request, reply) => {
+      const data = await getSupplierOptions()
+      reply.send({
+        data,
         message: 'Lấy danh sách nhà cung cấp thành công!'
       })
     }

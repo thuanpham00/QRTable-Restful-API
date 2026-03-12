@@ -77,7 +77,8 @@ export const getImportReceiptList = async ({
                   select: {
                     name: true,
                     unit: true,
-                    image: true
+                    image: true,
+                    category: true
                   }
                 },
                 supplier: {
@@ -133,6 +134,7 @@ export const getImportReceiptList = async ({
       ingredientName: item.supplierIngredient.ingredient.name,
       ingredientUnit: item.supplierIngredient.ingredient.unit,
       ingredientImage: item.supplierIngredient.ingredient.image,
+      ingredientCategory: item.supplierIngredient.ingredient.category,
       supplierName: item.supplierIngredient.supplier.name
     }))
   }))
@@ -160,7 +162,8 @@ export const getImportReceiptDetail = async (id: number) => {
                 select: {
                   name: true,
                   unit: true,
-                  image: true
+                  image: true,
+                  category: true
                 }
               },
               supplier: {
@@ -217,14 +220,12 @@ export const getImportReceiptDetail = async (id: number) => {
       ingredientName: item.supplierIngredient.ingredient.name,
       ingredientUnit: item.supplierIngredient.ingredient.unit,
       ingredientImage: item.supplierIngredient.ingredient.image,
+      ingredientCategory: item.supplierIngredient.ingredient.category,
       supplierName: item.supplierIngredient.supplier.name
     }))
   }
 }
 
-/**
- * Tạo phiếu nhập kho mới
- */
 export const createImportReceipt = async (body: CreateImportReceiptBodyType, accountId: number) => {
   return await prisma.$transaction(async (tx) => {
     // 1. Generate mã phiếu nhập tự động
@@ -255,7 +256,7 @@ export const createImportReceipt = async (body: CreateImportReceiptBodyType, acc
         note: body.note,
         createdBy: accountId,
         items: {
-          create: itemsData // tạo liên kết vì importReceiptId sẽ tự động gán vào items
+          create: itemsData // tạo liên kết vì importReceiptId sẽ tự động gán vào items (tạo ImportReceipt trước rồi mới tạo items (ImportReceiptItem))
         }
       },
       include: {
@@ -267,7 +268,8 @@ export const createImportReceipt = async (body: CreateImportReceiptBodyType, acc
                   select: {
                     name: true,
                     unit: true,
-                    image: true
+                    image: true,
+                    category: true
                   }
                 },
                 supplier: {
@@ -320,15 +322,13 @@ export const createImportReceipt = async (body: CreateImportReceiptBodyType, acc
         ingredientName: item.supplierIngredient.ingredient.name,
         ingredientUnit: item.supplierIngredient.ingredient.unit,
         ingredientImage: item.supplierIngredient.ingredient.image,
+        ingredientCategory: item.supplierIngredient.ingredient.category,
         supplierName: item.supplierIngredient.supplier.name
       }))
     }
   })
 }
 
-/**
- * Cập nhật phiếu nhập kho
- */
 export const updateImportReceipt = async (id: number, body: UpdateImportReceiptBodyType) => {
   return await prisma.$transaction(async (tx) => {
     // Kiểm tra phiếu nhập có tồn tại không
@@ -352,12 +352,12 @@ export const updateImportReceipt = async (id: number, body: UpdateImportReceiptB
     // Build update data
     const updateData: any = {}
 
-    if (body.supplierId !== undefined) {
-      updateData.supplierId = body.supplierId
-    }
-
     if (body.importDate !== undefined) {
       updateData.importDate = body.importDate
+    }
+
+    if (body.note !== undefined) {
+      updateData.note = body.note
     }
 
     if (body.status !== undefined) {
@@ -429,10 +429,6 @@ export const updateImportReceipt = async (id: number, body: UpdateImportReceiptB
       }
     }
 
-    if (body.note !== undefined) {
-      updateData.note = body.note
-    }
-
     // Update items nếu có
     if (body.items) {
       // Xóa items cũ
@@ -472,7 +468,8 @@ export const updateImportReceipt = async (id: number, body: UpdateImportReceiptB
                   select: {
                     name: true,
                     unit: true,
-                    image: true
+                    image: true,
+                    category: true
                   }
                 },
                 supplier: {
@@ -525,45 +522,9 @@ export const updateImportReceipt = async (id: number, body: UpdateImportReceiptB
         ingredientName: item.supplierIngredient.ingredient.name,
         ingredientUnit: item.supplierIngredient.ingredient.unit,
         ingredientImage: item.supplierIngredient.ingredient.image,
+        ingredientCategory: item.supplierIngredient.ingredient.category,
         supplierName: item.supplierIngredient.supplier.name
       }))
     }
-  })
-}
-
-/**
- * Xóa phiếu nhập kho
- */
-export const deleteImportReceipt = async (id: number) => {
-  return await prisma.$transaction(async (tx) => {
-    // Kiểm tra phiếu nhập có tồn tại không
-    const receipt = await tx.importReceipt.findUnique({
-      where: { id },
-      include: {
-        items: {
-          include: {
-            supplierIngredient: {
-              include: {
-                ingredient: true
-              }
-            }
-          }
-        }
-      }
-    })
-
-    if (!receipt) {
-      throw new Error('Không tìm thấy phiếu nhập')
-    }
-
-    // Chỉ cho phép xóa nếu status = Draft
-    if (receipt.status === 'Completed') {
-      throw new Error('Không thể xóa phiếu nhập đã hoàn thành. Hãy hủy phiếu nhập trước.')
-    }
-
-    // Delete receipt (cascade sẽ xóa items)
-    await tx.importReceipt.delete({
-      where: { id }
-    })
   })
 }

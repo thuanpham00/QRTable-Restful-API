@@ -68,3 +68,16 @@ export const SupplierParams = z.object({
 })
 
 export type SupplierParamsType = z.TypeOf<typeof SupplierParams>
+
+// Schema cho dropdown/select options
+export const SupplierOptionSchema = z.object({
+  id: z.number(),
+  name: z.string()
+})
+
+export const SupplierOptionsRes = z.object({
+  data: z.array(SupplierOptionSchema),
+  message: z.string()
+})
+
+export type SupplierOptionsResType = z.TypeOf<typeof SupplierOptionsRes>

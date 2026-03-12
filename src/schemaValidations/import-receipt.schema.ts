@@ -15,11 +15,11 @@ export type ImportReceiptQueryType = z.TypeOf<typeof ImportReceiptQuery>
 
 // Schema cho ImportReceiptItem trong body
 export const ImportReceiptItemBodySchema = z.object({
-  supplierIngredientId: z.number(),
+  supplierIngredientId: z.number().min(1),
   quantity: z.number().positive(),
   unitPrice: z.number().positive(),
-  batchNumber: z.string().optional(),
-  expiryDate: z.coerce.date().optional(),
+  batchNumber: z.string().min(2).max(100),
+  expiryDate: z.coerce.date(),
   note: z.string().optional()
 })
 
@@ -41,6 +41,7 @@ export const ImportReceiptItemSchema = z.object({
   ingredientName: z.string().optional(),
   ingredientUnit: z.string().optional(),
   ingredientImage: z.string().optional(),
+  ingredientCategory: z.string().optional(),
   supplierName: z.string().optional()
 })
 
@@ -85,7 +86,6 @@ export type CreateImportReceiptResType = z.TypeOf<typeof CreateImportReceiptRes>
 
 // Body cho update ImportReceipt
 export const UpdateImportReceiptBody = z.object({
-  supplierId: z.number().optional(),
   importDate: z.coerce.date().optional(),
   status: z.enum(['Draft', 'Completed', 'Cancelled']).optional(),
   note: z.string().optional(),
@@ -125,10 +125,3 @@ export const ImportReceiptParams = z.object({
 })
 
 export type ImportReceiptParamsType = z.TypeOf<typeof ImportReceiptParams>
-
-// Response cho delete
-export const DeleteImportReceiptRes = z.object({
-  message: z.string()
-})
-
-export type DeleteImportReceiptResType = z.TypeOf<typeof DeleteImportReceiptRes>

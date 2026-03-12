@@ -1,6 +1,5 @@
 import {
   createImportReceipt,
-  deleteImportReceipt,
   getImportReceiptDetail,
   getImportReceiptList,
   updateImportReceipt
@@ -11,8 +10,6 @@ import {
   CreateImportReceiptBodyType,
   CreateImportReceiptRes,
   CreateImportReceiptResType,
-  DeleteImportReceiptRes,
-  DeleteImportReceiptResType,
   GetImportReceiptDetailRes,
   GetImportReceiptDetailResType,
   GetImportReceiptListRes,
@@ -153,35 +150,6 @@ export default async function importReceiptRoutes(fastify: FastifyInstance, opti
         return reply.status(400).send({
           data: null as any,
           message: error.message || 'Lỗi khi cập nhật phiếu nhập kho'
-        })
-      }
-    }
-  )
-
-  // DELETE /import-receipts/:id - Xóa phiếu nhập kho
-  fastify.delete<{
-    Reply: DeleteImportReceiptResType
-    Params: ImportReceiptParamsType
-  }>(
-    '/:id',
-    {
-      schema: {
-        response: {
-          200: DeleteImportReceiptRes
-        },
-        params: ImportReceiptParams
-      }
-    },
-    async (request, reply) => {
-      try {
-        await deleteImportReceipt(request.params.id)
-
-        reply.status(200).send({
-          message: 'Xóa phiếu nhập kho thành công'
-        })
-      } catch (error: any) {
-        return reply.status(400).send({
-          message: error.message || 'Lỗi khi xóa phiếu nhập kho'
         })
       }
     }

@@ -26,7 +26,8 @@ export const getSupplyList = async (idSupplier: number) => {
             id: true,
             name: true,
             category: true,
-            image: true
+            image: true,
+            unit: true
           }
         }
       }
@@ -59,7 +60,8 @@ export const getSupplyDetail = async (id: number) => {
           name: true,
           category: true,
           description: true,
-          image: true
+          image: true,
+          unit: true
         }
       }
     }
