@@ -1,4 +1,4 @@
-import { GuestCallStatus, ManagerRoom, OrderStatus, Role } from '@/constants/type'
+import { GuestCallStatus, GuestRoom, ManagerRoom, Role } from '@/constants/type'
 import prisma from '@/database'
 import { AuthError } from '@/utils/errors'
 import { getChalk } from '@/utils/helpers'
@@ -30,6 +30,7 @@ export const socketPlugin = fastifyPlugin(async (fastify) => {
             socketId: socket.id
           }
         })
+        socket.join(GuestRoom)
       } else {
         await prisma.socket.upsert({
           where: {

@@ -45,6 +45,7 @@ export const OrderStatusValues = [
 ] as const
 
 export const ManagerRoom = 'manager' as const
+export const GuestRoom = 'guest' as const
 
 export const MenuItemStatus = {
   AVAILABLE: 'Available', // Đang bán trong menu
