@@ -140,7 +140,7 @@ export default async function importReceiptRoutes(fastify: FastifyInstance, opti
     },
     async (request, reply) => {
       try {
-        const data = await updateImportReceipt(request.params.id, request.body)
+        const data = await updateImportReceipt(request.params.id, request.body, fastify)
 
         reply.status(200).send({
           data: data as UpdateImportReceiptResType['data'],

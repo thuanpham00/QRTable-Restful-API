@@ -4,7 +4,6 @@ import {
   getCountOrderTodayController,
   getOrderDetailController,
   getOrdersController,
-  payOrdersByTableController,
   updateOrderController
 } from '@/controllers/order.controller'
 import { requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
@@ -22,10 +21,6 @@ import {
   GetOrdersResType,
   OrderParam,
   OrderParamType,
-  PayTableOrdersBody,
-  PayTableOrdersBodyType,
-  PayTableOrdersRes,
-  PayTableOrdersResType,
   UpdateOrderBody,
   UpdateOrderBodyType,
   UpdateOrderRes,
@@ -123,10 +118,14 @@ export default async function orderRoutes(fastify: FastifyInstance, options: Fas
       }
     },
     async (request, reply) => {
-      const result = await updateOrderController(request.params.orderId, {
-        ...request.body,
-        orderHandlerId: request.decodedAccessToken?.userId as number
-      })
+      const result = await updateOrderController(
+        request.params.orderId,
+        {
+          ...request.body,
+          orderHandlerId: request.decodedAccessToken?.userId as number
+        },
+        fastify
+      )
       if (result.socketId) {
         fastify.io.to(result.socketId).to(ManagerRoom).emit('update-order', result.order) // dành cho đơn hàng tạo từ khách
       } else {

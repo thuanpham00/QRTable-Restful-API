@@ -38,7 +38,6 @@ import startBatchStatusCronJob from '@/jobs/startBatchStatus.job'
 import inventoryBatchRoutes from '@/routes/inventory-batch.route'
 import exportReceiptRoutes from '@/routes/export-receipts.route'
 import importReceiptRoutes from '@/routes/import-receipts.route'
-import autoUpdateStatusDishOutStockIngredient from '@/jobs/autoUpdateDishOutStock.job'
 
 const fastify = Fastify({
   logger: false
@@ -76,7 +75,6 @@ const start = async () => {
     autoRemoveRefreshTokenJob() // tự động xóa refresh token sau mỗi giờ
     autoRotateTableTokenJob(fastify) // tự động changeToken cho bàn sau 10 phút 1 lần
     startBatchStatusCronJob() // Cập nhật status lô hàng mỗi ngày lúc 00:00
-    autoUpdateStatusDishOutStockIngredient(fastify) // Cập nhật status món ăn hết hàng liên quan đến nguyên liệu mỗi phút
 
     fastify.register(authRoutes, {
       prefix: '/auth'

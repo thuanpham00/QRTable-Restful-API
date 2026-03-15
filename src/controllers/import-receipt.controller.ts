@@ -1,4 +1,5 @@
 import prisma from '@/database'
+import autoUpdateStatusDishOutStockIngredient from '@/jobs/autoUpdateDishOutStock.job'
 import {
   ImportReceiptQueryType,
   CreateImportReceiptBodyType,
@@ -329,7 +330,7 @@ export const createImportReceipt = async (body: CreateImportReceiptBodyType, acc
   })
 }
 
-export const updateImportReceipt = async (id: number, body: UpdateImportReceiptBodyType) => {
+export const updateImportReceipt = async (id: number, body: UpdateImportReceiptBodyType, fastify: any) => {
   return await prisma.$transaction(async (tx) => {
     // Kiểm tra phiếu nhập có tồn tại không
     const existingReceipt = await tx.importReceipt.findUnique({
@@ -426,6 +427,8 @@ export const updateImportReceipt = async (id: number, body: UpdateImportReceiptB
             }
           })
         }
+
+        await autoUpdateStatusDishOutStockIngredient(fastify)
       }
     }
 

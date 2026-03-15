@@ -1,7 +1,9 @@
 import { DishStatus, MenuItemStatus, OrderStatus, TableStatus } from '@/constants/type'
 import prisma from '@/database'
+import autoUpdateStatusDishOutStockIngredient from '@/jobs/autoUpdateDishOutStock.job'
 import { CreateOrdersBodyType, UpdateOrderBodyType } from '@/schemaValidations/order.schema'
 import { exportIngredientFIFO, generateExportReceiptCode } from '@/utils/inventory-export.utils'
+import fastify from 'fastify'
 
 export const createOrdersController = async (orderHandlerId: number, body: CreateOrdersBodyType) => {
   const { guestId, orders } = body
@@ -267,7 +269,8 @@ export const getOrderDetailController = (orderId: number) => {
 
 export const updateOrderController = async (
   orderId: number,
-  body: UpdateOrderBodyType & { orderHandlerId: number }
+  body: UpdateOrderBodyType & { orderHandlerId: number },
+  fastify: any
 ) => {
   const { status, menuItemId, quantity, orderHandlerId } = body
   const result = await prisma.$transaction(async (tx) => {
@@ -422,6 +425,9 @@ export const updateOrderController = async (
       guestId: result.guestId!
     }
   })
+
+  await autoUpdateStatusDishOutStockIngredient(fastify)
+
   return {
     order: result,
     socketId: socketRecord?.socketId
