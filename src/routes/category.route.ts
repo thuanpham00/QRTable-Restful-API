@@ -6,7 +6,7 @@ import {
   getListNameDishCategory,
   updateDishCategory
 } from '@/controllers/dishCategory.controller'
-import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import { DishParamsType } from '@/schemaValidations/dish.schema'
 import {
   CreateDishCategoryBody,
@@ -27,6 +27,13 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 
 export default async function categoryRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
+  fastify.addHook(
+    'preValidation',
+    fastify.auth([requireLoginedHook, requireOwnerHook], {
+      relation: 'and'
+    })
+  )
+
   fastify.get<{
     Reply: DishCategoryListResType
     Querystring: DishCategoryQueryType
@@ -52,28 +59,28 @@ export default async function categoryRoutes(fastify: FastifyInstance, options: 
         message: 'Lấy danh sách danh mục món ăn thành công!'
       })
     }
-  ),
-    fastify.get<{
-      Params: DishParamsType
-      Reply: DishCategoryResType
-    }>(
-      '/:id',
-      {
-        schema: {
-          params: DishCategoryParams,
-          response: {
-            200: DishCategoryRes
-          }
+  )
+  fastify.get<{
+    Params: DishParamsType
+    Reply: DishCategoryResType
+  }>(
+    '/:id',
+    {
+      schema: {
+        params: DishCategoryParams,
+        response: {
+          200: DishCategoryRes
         }
-      },
-      async (request, reply) => {
-        const dish = await getDishCategoryDetail(request.params.id)
-        reply.send({
-          data: dish as DishCategoryResType['data'],
-          message: 'Lấy thông tin danh mục món ăn thành công!'
-        })
       }
-    )
+    },
+    async (request, reply) => {
+      const dish = await getDishCategoryDetail(request.params.id)
+      reply.send({
+        data: dish as DishCategoryResType['data'],
+        message: 'Lấy thông tin danh mục món ăn thành công!'
+      })
+    }
+  )
 
   fastify.post<{
     Body: CreateDishCategoryBodyType
@@ -86,10 +93,7 @@ export default async function categoryRoutes(fastify: FastifyInstance, options: 
         response: {
           200: DishCategoryRes
         }
-      },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const dishCategory = await createDishCategory(request.body)
@@ -113,11 +117,7 @@ export default async function categoryRoutes(fastify: FastifyInstance, options: 
         response: {
           200: DishCategoryRes
         }
-      },
-
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const dishCategory = await updateDishCategory(request.params.id, request.body)
@@ -139,10 +139,7 @@ export default async function categoryRoutes(fastify: FastifyInstance, options: 
         response: {
           200: DishCategoryRes
         }
-      },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const result = await deleteDishCategory(request.params.id)

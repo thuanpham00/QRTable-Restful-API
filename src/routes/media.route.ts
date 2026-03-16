@@ -1,4 +1,4 @@
-import { pauseApiHook, requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import fastifyMultipart from '@fastify/multipart'
 import { uploadImage } from '@/controllers/media.controller'
@@ -8,7 +8,7 @@ export default async function mediaRoutes(fastify: FastifyInstance, options: Fas
   fastify.register(fastifyMultipart)
   fastify.addHook(
     'preValidation',
-    fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+    fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
       relation: 'and'
     })
   )

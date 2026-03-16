@@ -6,7 +6,7 @@ import {
   getSupplierOptions,
   updateSupplier
 } from '@/controllers/supplier.controller'
-import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   CreateSupplierBody,
   CreateSupplierBodyType,
@@ -28,7 +28,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 export default async function supplierRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
   fastify.addHook(
     'preValidation',
-    fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
+    fastify.auth([requireLoginedHook, requireOwnerHook], {
       relation: 'and'
     })
   )

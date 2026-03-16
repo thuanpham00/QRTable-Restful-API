@@ -4,7 +4,7 @@ import {
   getImportReceiptList,
   updateImportReceipt
 } from '@/controllers/import-receipt.controller'
-import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   CreateImportReceiptBody,
   CreateImportReceiptBodyType,
@@ -28,7 +28,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 export default async function importReceiptRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
   fastify.addHook(
     'preValidation',
-    fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
+    fastify.auth([requireLoginedHook, requireOwnerHook], {
       relation: 'and'
     })
   )

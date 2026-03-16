@@ -7,7 +7,7 @@ import {
   updateTable
 } from '@/controllers/table.controller'
 import { getListHistoryTableSession } from '@/controllers/tableSession.controller'
-import { pauseApiHook, requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   CleanTableBody,
   CleanTableBodyType,
@@ -96,7 +96,7 @@ export default async function tablesRoutes(fastify: FastifyInstance, options: Fa
           200: TableRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
         relation: 'and'
       })
     },
@@ -123,7 +123,7 @@ export default async function tablesRoutes(fastify: FastifyInstance, options: Fa
           200: TableRes
         }
       },
-      preValidation: fastify.auth([pauseApiHook, requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
         relation: 'and'
       })
     },
@@ -148,7 +148,7 @@ export default async function tablesRoutes(fastify: FastifyInstance, options: Fa
           200: TableRes
         }
       },
-      preValidation: fastify.auth([pauseApiHook, requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
         relation: 'and'
       })
     },
@@ -172,7 +172,7 @@ export default async function tablesRoutes(fastify: FastifyInstance, options: Fa
           200: TableSessionListRes
         }
       },
-      preValidation: fastify.auth([pauseApiHook, requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
         relation: 'and'
       })
     },
@@ -199,7 +199,7 @@ export default async function tablesRoutes(fastify: FastifyInstance, options: Fa
           200: CleanTableRes
         }
       },
-      preValidation: fastify.auth([pauseApiHook, requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
         relation: 'and'
       })
     },

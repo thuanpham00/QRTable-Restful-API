@@ -13,7 +13,7 @@ import {
   updateDishInMenu,
   updateMenu
 } from '@/controllers/menu.controller'
-import { pauseApiHook, requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   AddDishToMenu,
   AddDishToMenuType,
@@ -68,66 +68,66 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
         message: 'Lấy danh sách menu thành công!'
       })
     }
-  ),
-    fastify.get<{
-      Reply: MenuActiveResType
-    }>(
-      '/active',
-      {
-        schema: {
-          response: {
-            200: MenuActiveRes
-          }
+  )
+  fastify.get<{
+    Reply: MenuActiveResType
+  }>(
+    '/active',
+    {
+      schema: {
+        response: {
+          200: MenuActiveRes
         }
-      },
-      async (request, reply) => {
-        const data = await getMenuIsActive()
-        reply.send({
-          data: data as MenuActiveResType['data'],
-          message: 'Lấy menu đang kích hoạt thành công!'
-        })
       }
-    ),
-    fastify.get<{
-      Reply: MenuItemSuggestResType
-    }>(
-      '/suggested',
-      {
-        schema: {
-          response: {
-            200: MenuItemSuggestRes
-          }
+    },
+    async (request, reply) => {
+      const data = await getMenuIsActive()
+      reply.send({
+        data: data as MenuActiveResType['data'],
+        message: 'Lấy menu đang kích hoạt thành công!'
+      })
+    }
+  )
+  fastify.get<{
+    Reply: MenuItemSuggestResType
+  }>(
+    '/suggested',
+    {
+      schema: {
+        response: {
+          200: MenuItemSuggestRes
         }
-      },
-      async (request, reply) => {
-        const data = await getSuggestedMenu()
-        reply.send({
-          data: data as MenuItemSuggestResType['data'],
-          message: 'Lấy món ăn đề xuất thành công!'
-        })
       }
-    ),
-    fastify.get<{
-      Params: MenuParamsType
-      Reply: MenuResType
-    }>(
-      '/:id',
-      {
-        schema: {
-          params: MenuParams,
-          response: {
-            200: MenuRes
-          }
+    },
+    async (request, reply) => {
+      const data = await getSuggestedMenu()
+      reply.send({
+        data: data as MenuItemSuggestResType['data'],
+        message: 'Lấy món ăn đề xuất thành công!'
+      })
+    }
+  )
+  fastify.get<{
+    Params: MenuParamsType
+    Reply: MenuResType
+  }>(
+    '/:id',
+    {
+      schema: {
+        params: MenuParams,
+        response: {
+          200: MenuRes
         }
-      },
-      async (request, reply) => {
-        const dish = await getMenuDetail(request.params.id)
-        reply.send({
-          data: dish as MenuResType['data'],
-          message: 'Lấy thông tin menu thành công!'
-        })
       }
-    )
+    },
+    async (request, reply) => {
+      const dish = await getMenuDetail(request.params.id)
+      reply.send({
+        data: dish as MenuResType['data'],
+        message: 'Lấy thông tin menu thành công!'
+      })
+    }
+  )
 
   fastify.post<{
     Body: CreateMenuBodyType
@@ -141,7 +141,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
           200: MenuRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
         relation: 'and'
       })
     },
@@ -170,7 +170,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
         }
       },
 
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
         relation: 'and'
       })
     },
@@ -196,7 +196,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
           200: MenuRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
         relation: 'and'
       })
     },
@@ -268,7 +268,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
           200: MenuItemRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
         relation: 'and'
       })
     },
@@ -297,7 +297,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
           200: MenuItemRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
         relation: 'and'
       })
     },
@@ -324,7 +324,7 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
           200: MenuItemRes
         }
       },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+      preValidation: fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
         relation: 'and'
       })
     },

@@ -12,7 +12,7 @@ import {
   updateEmployeeAccount,
   updateMeController
 } from '@/controllers/account.controller'
-import { pauseApiHook, requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   AccountIdParam,
   AccountIdParamType,
@@ -71,28 +71,7 @@ export default async function accountRoutes(fastify: FastifyInstance, options: F
       })
     }
   )
-  fastify.post<{
-    Body: CreateEmployeeAccountBodyType
-    Reply: AccountResType
-  }>(
-    '/',
-    {
-      schema: {
-        response: {
-          200: AccountRes
-        },
-        body: CreateEmployeeAccountBody
-      },
-      preValidation: fastify.auth([requireOwnerHook, pauseApiHook])
-    },
-    async (request, reply) => {
-      const account = await createEmployeeAccount(request.body)
-      reply.send({
-        data: account as AccountResType['data'],
-        message: 'Tạo tài khoản thành công'
-      })
-    }
-  )
+
   fastify.get<{ Reply: AccountResType; Params: AccountIdParamType }>(
     '/detail/:id',
     {
@@ -114,6 +93,29 @@ export default async function accountRoutes(fastify: FastifyInstance, options: F
     }
   )
 
+  fastify.post<{
+    Body: CreateEmployeeAccountBodyType
+    Reply: AccountResType
+  }>(
+    '/',
+    {
+      schema: {
+        response: {
+          200: AccountRes
+        },
+        body: CreateEmployeeAccountBody
+      },
+      preValidation: fastify.auth([requireOwnerHook])
+    },
+    async (request, reply) => {
+      const account = await createEmployeeAccount(request.body)
+      reply.send({
+        data: account as AccountResType['data'],
+        message: 'Tạo tài khoản thành công'
+      })
+    }
+  )
+
   fastify.put<{ Reply: AccountResType; Params: AccountIdParamType; Body: UpdateEmployeeAccountBodyType }>(
     '/detail/:id',
     {
@@ -124,7 +126,7 @@ export default async function accountRoutes(fastify: FastifyInstance, options: F
         params: AccountIdParam,
         body: UpdateEmployeeAccountBody
       },
-      preValidation: fastify.auth([requireOwnerHook, pauseApiHook])
+      preValidation: fastify.auth([requireOwnerHook])
     },
     async (request, reply) => {
       const accountId = request.params.id
@@ -149,7 +151,7 @@ export default async function accountRoutes(fastify: FastifyInstance, options: F
         },
         params: AccountIdParam
       },
-      preValidation: fastify.auth([requireOwnerHook, pauseApiHook])
+      preValidation: fastify.auth([requireOwnerHook])
     },
     async (request, reply) => {
       const accountId = request.params.id
@@ -193,8 +195,7 @@ export default async function accountRoutes(fastify: FastifyInstance, options: F
           200: AccountRes
         },
         body: UpdateMeBody
-      },
-      preValidation: fastify.auth([pauseApiHook])
+      }
     },
     async (request, reply) => {
       const result = await updateMeController(request.decodedAccessToken?.userId as number, request.body)
@@ -216,8 +217,7 @@ export default async function accountRoutes(fastify: FastifyInstance, options: F
           200: AccountRes
         },
         body: ChangePasswordBody
-      },
-      preValidation: fastify.auth([pauseApiHook])
+      }
     },
     async (request, reply) => {
       const result = await changePasswordController(request.decodedAccessToken?.userId as number, request.body)
@@ -239,8 +239,7 @@ export default async function accountRoutes(fastify: FastifyInstance, options: F
           200: ChangePasswordV2Res
         },
         body: ChangePasswordV2Body
-      },
-      preValidation: fastify.auth([pauseApiHook])
+      }
     },
     async (request, reply) => {
       const result = await changePasswordV2Controller(request.decodedAccessToken?.userId as number, request.body)

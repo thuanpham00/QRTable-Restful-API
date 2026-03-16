@@ -20,80 +20,80 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 export default async function guestCallRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
   fastify.addHook(
     'preValidation',
-    fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook, requireGuestHook]], {
+    fastify.auth([requireLoginedHook, [requireOwnerHook, requireEmployeeHook]], {
       relation: 'and'
     })
-  ),
-    fastify.get<{ Reply: GuestCallListResType; Querystring: GetOrdersQueryParamsType }>(
-      '/',
-      {
-        schema: {
-          response: {
-            200: GuestCallListRes
-          },
-          querystring: GetOrdersQueryParams
-        }
-      },
-      async (request, reply) => {
-        const result = await getGuestCallsController({
-          fromDate: request.query.fromDate,
-          toDate: request.query.toDate
-        })
-        reply.send({
-          message: 'Lấy danh sách khách gọi phục vụ thành công',
-          data: result as GuestCallListResType['data']
-        })
+  )
+  fastify.get<{ Reply: GuestCallListResType; Querystring: GetOrdersQueryParamsType }>(
+    '/',
+    {
+      schema: {
+        response: {
+          200: GuestCallListRes
+        },
+        querystring: GetOrdersQueryParams
       }
-    ),
-    fastify.put<{
-      Reply: GuestCallResType
-      Params: DishParamsType
-      Body: { status: GuestCallStatusType }
-    }>(
-      '/:id',
-      {
-        schema: {
-          response: {
-            200: GuestCallRes
-          },
-          querystring: GetOrdersQueryParams
-        }
-      },
-      async (request, reply) => {
-        const result = await updateGuestCall({
-          idGuestCall: request.params.id,
-          status: request.body.status,
-          accountRecipient: request.decodedAccessToken?.userId as number
-        })
-        fastify.io.to(ManagerRoom).emit('count-call-waiter', result)
-        reply.send({
-          message: 'Cập nhật khách gọi phục vụ thành công!',
-          data: result as GuestCallResType['data']
-        })
+    },
+    async (request, reply) => {
+      const result = await getGuestCallsController({
+        fromDate: request.query.fromDate,
+        toDate: request.query.toDate
+      })
+      reply.send({
+        message: 'Lấy danh sách khách gọi phục vụ thành công',
+        data: result as GuestCallListResType['data']
+      })
+    }
+  )
+  fastify.put<{
+    Reply: GuestCallResType
+    Params: DishParamsType
+    Body: { status: GuestCallStatusType }
+  }>(
+    '/:id',
+    {
+      schema: {
+        response: {
+          200: GuestCallRes
+        },
+        querystring: GetOrdersQueryParams
       }
-    ),
-    fastify.get<{
-      Reply: GuestCallCountResType
-      Querystring: GetOrdersQueryParamsType
-    }>(
-      '/count-pending-today',
-      {
-        schema: {
-          response: {
-            200: GuestCallCountRes
-          },
-          querystring: GetOrdersQueryParams
-        }
-      },
-      async (request, reply) => {
-        const result = await getCountGuestCallPendingController({
-          fromDate: request.query.fromDate,
-          toDate: request.query.toDate
-        })
-        reply.send({
-          message: 'Lấy số lượng khách gọi phục vụ đang chờ thành công',
-          data: result
-        })
+    },
+    async (request, reply) => {
+      const result = await updateGuestCall({
+        idGuestCall: request.params.id,
+        status: request.body.status,
+        accountRecipient: request.decodedAccessToken?.userId as number
+      })
+      fastify.io.to(ManagerRoom).emit('count-call-waiter', result)
+      reply.send({
+        message: 'Cập nhật khách gọi phục vụ thành công!',
+        data: result as GuestCallResType['data']
+      })
+    }
+  )
+  fastify.get<{
+    Reply: GuestCallCountResType
+    Querystring: GetOrdersQueryParamsType
+  }>(
+    '/count-pending-today',
+    {
+      schema: {
+        response: {
+          200: GuestCallCountRes
+        },
+        querystring: GetOrdersQueryParams
       }
-    )
+    },
+    async (request, reply) => {
+      const result = await getCountGuestCallPendingController({
+        fromDate: request.query.fromDate,
+        toDate: request.query.toDate
+      })
+      reply.send({
+        message: 'Lấy số lượng khách gọi phục vụ đang chờ thành công',
+        data: result
+      })
+    }
+  )
 }

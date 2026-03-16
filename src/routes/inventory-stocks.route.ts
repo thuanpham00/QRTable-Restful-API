@@ -4,7 +4,7 @@ import {
   getInventoryStockListNoPagination,
   updateInventoryStock
 } from '@/controllers/inventory-stock.controller'
-import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   InventoryStockListNoPaginationRes,
   InventoryStockListNoPaginationResType,
@@ -24,7 +24,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 export default async function inventoryStockRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
   fastify.addHook(
     'preValidation',
-    fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
+    fastify.auth([requireLoginedHook, requireOwnerHook], {
       relation: 'and'
     })
   )
@@ -102,7 +102,7 @@ export default async function inventoryStockRoutes(fastify: FastifyInstance, opt
     }
   )
 
-  // PUT /inventory-stocks/:id - Cập nhật tồn kho
+  // PUT /inventory-stocks/:id - Cập nhật ngưỡng tồn kho
   fastify.put<{
     Params: InventoryStockParamsType
     Body: UpdateInventoryStockBodyType

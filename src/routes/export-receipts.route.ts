@@ -1,5 +1,5 @@
 import { getExportReceiptDetail, getExportReceiptList } from '@/controllers/export-receipt.controller'
-import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   ExportReceiptListRes,
   ExportReceiptListResType,
@@ -15,7 +15,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 export default async function exportReceiptRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
   fastify.addHook(
     'preValidation',
-    fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
+    fastify.auth([requireLoginedHook, requireOwnerHook], {
       relation: 'and'
     })
   )

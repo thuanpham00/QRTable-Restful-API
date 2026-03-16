@@ -1,5 +1,5 @@
 import { getListInventoryBatchesByStockId } from '@/controllers/inventory-batch.controller'
-import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   InventoryBatchListRes,
   InventoryBatchListResType,
@@ -11,7 +11,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 export default async function inventoryBatchRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
   fastify.addHook(
     'preValidation',
-    fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
+    fastify.auth([requireLoginedHook, requireOwnerHook], {
       relation: 'and'
     })
   )

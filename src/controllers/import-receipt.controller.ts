@@ -331,203 +331,209 @@ export const createImportReceipt = async (body: CreateImportReceiptBodyType, acc
 }
 
 export const updateImportReceipt = async (id: number, body: UpdateImportReceiptBodyType, fastify: any) => {
-  return await prisma.$transaction(async (tx) => {
-    // Kiểm tra phiếu nhập có tồn tại không
-    const existingReceipt = await tx.importReceipt.findUnique({
-      where: { id }
-    })
+  return await prisma.$transaction(
+    async (tx) => {
+      // Kiểm tra phiếu nhập có tồn tại không
+      const existingReceipt = await tx.importReceipt.findUnique({
+        where: { id }
+      })
 
-    if (!existingReceipt) {
-      throw new Error('Không tìm thấy phiếu nhập')
-    }
+      if (!existingReceipt) {
+        throw new Error('Không tìm thấy phiếu nhập')
+      }
 
-    // Chỉ cho phép update nếu status = Draft
-    if (existingReceipt.status === 'Completed') {
-      throw new Error('Không thể sửa phiếu nhập đã hoàn thành')
-    }
+      // Chỉ cho phép update nếu status = Draft
+      if (existingReceipt.status === 'Completed') {
+        throw new Error('Không thể sửa phiếu nhập đã hoàn thành')
+      }
 
-    if (existingReceipt.status === 'Cancelled') {
-      throw new Error('Không thể sửa phiếu nhập đã hủy')
-    }
+      if (existingReceipt.status === 'Cancelled') {
+        throw new Error('Không thể sửa phiếu nhập đã hủy')
+      }
 
-    // Build update data
-    const updateData: any = {}
+      // Build update data
+      const updateData: any = {}
 
-    if (body.importDate !== undefined) {
-      updateData.importDate = body.importDate
-    }
+      if (body.importDate !== undefined) {
+        updateData.importDate = body.importDate
+      }
 
-    if (body.note !== undefined) {
-      updateData.note = body.note
-    }
+      if (body.note !== undefined) {
+        updateData.note = body.note
+      }
 
-    if (body.status !== undefined) {
-      updateData.status = body.status
+      if (body.status !== undefined) {
+        updateData.status = body.status
 
-      // Nếu chuyển sang Completed → Cập nhật inventory
-      if (body.status === 'Completed' && existingReceipt.status === 'Draft') {
-        // Lấy items của phiếu nhập
-        const items = await tx.importReceiptItem.findMany({
-          where: { importReceiptId: id },
-          include: {
-            supplierIngredient: {
-              include: {
-                ingredient: true
+        // Nếu chuyển sang Completed → Cập nhật inventory
+        if (body.status === 'Completed' && existingReceipt.status === 'Draft') {
+          // Lấy items của phiếu nhập
+          const items = await tx.importReceiptItem.findMany({
+            where: { importReceiptId: id },
+            include: {
+              supplierIngredient: {
+                include: {
+                  ingredient: true
+                }
               }
             }
-          }
-        })
-
-        // Cập nhật InventoryStock và tạo InventoryBatch
-        for (const item of items) {
-          const ingredientId = item.supplierIngredient.ingredientId
-
-          // Tìm hoặc tạo InventoryStock
-          let stock = await tx.inventoryStock.findUnique({
-            where: { ingredientId }
           })
 
-          if (!stock) {
-            stock = await tx.inventoryStock.create({
+          // Cập nhật InventoryStock và tạo InventoryBatch
+          for (const item of items) {
+            const ingredientId = item.supplierIngredient.ingredientId
+
+            // Tìm hoặc tạo InventoryStock
+            let stock = await tx.inventoryStock.findUnique({
+              where: { ingredientId }
+            })
+
+            if (!stock) {
+              stock = await tx.inventoryStock.create({
+                data: {
+                  ingredientId,
+                  quantity: 0,
+                  avgUnitPrice: 0,
+                  totalValue: 0
+                }
+              })
+            }
+
+            // Tính toán giá trị mới
+            const newQuantity = stock.quantity + item.quantity
+            const newTotalValue = stock.totalValue + item.totalPrice
+            const newAvgUnitPrice = newQuantity > 0 ? newTotalValue / newQuantity : 0
+
+            // Update InventoryStock
+            await tx.inventoryStock.update({
+              where: { ingredientId },
               data: {
-                ingredientId,
-                quantity: 0,
-                avgUnitPrice: 0,
-                totalValue: 0
+                quantity: newQuantity,
+                avgUnitPrice: newAvgUnitPrice,
+                totalValue: newTotalValue,
+                lastImport: new Date()
+              }
+            })
+
+            // Tạo InventoryBatch
+            await tx.inventoryBatch.create({
+              data: {
+                inventoryStockId: stock.id,
+                batchNumber: item.batchNumber || `BATCH-${Date.now()}`,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                status: 'Available',
+                importDate: existingReceipt.importDate,
+                expiryDate: item.expiryDate
               }
             })
           }
 
-          // Tính toán giá trị mới
-          const newQuantity = stock.quantity + item.quantity
-          const newTotalValue = stock.totalValue + item.totalPrice
-          const newAvgUnitPrice = newQuantity > 0 ? newTotalValue / newQuantity : 0
-
-          // Update InventoryStock
-          await tx.inventoryStock.update({
-            where: { ingredientId },
-            data: {
-              quantity: newQuantity,
-              avgUnitPrice: newAvgUnitPrice,
-              totalValue: newTotalValue,
-              lastImport: new Date()
-            }
-          })
-
-          // Tạo InventoryBatch
-          await tx.inventoryBatch.create({
-            data: {
-              inventoryStockId: stock.id,
-              batchNumber: item.batchNumber || `BATCH-${Date.now()}`,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              status: 'Available',
-              importDate: existingReceipt.importDate,
-              expiryDate: item.expiryDate
-            }
-          })
+          await autoUpdateStatusDishOutStockIngredient(fastify)
         }
-
-        await autoUpdateStatusDishOutStockIngredient(fastify)
       }
-    }
 
-    // Update items nếu có
-    if (body.items) {
-      // Xóa items cũ
-      await tx.importReceiptItem.deleteMany({
-        where: { importReceiptId: id }
-      })
+      // Update items nếu có
+      if (body.items) {
+        // Xóa items cũ
+        await tx.importReceiptItem.deleteMany({
+          where: { importReceiptId: id }
+        })
 
-      // Tạo items mới
-      await tx.importReceiptItem.createMany({
-        data: body.items.map((item) => ({
-          importReceiptId: id,
-          supplierIngredientId: item.supplierIngredientId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.quantity * item.unitPrice,
-          batchNumber: item.batchNumber,
-          expiryDate: item.expiryDate,
-          note: item.note
-        }))
-      })
+        // Tạo items mới
+        await tx.importReceiptItem.createMany({
+          data: body.items.map((item) => ({
+            importReceiptId: id,
+            supplierIngredientId: item.supplierIngredientId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.quantity * item.unitPrice,
+            batchNumber: item.batchNumber,
+            expiryDate: item.expiryDate,
+            note: item.note
+          }))
+        })
 
-      // Recalculate totalAmount
-      const totalAmount = body.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
-      updateData.totalAmount = totalAmount
-    }
+        // Recalculate totalAmount
+        const totalAmount = body.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+        updateData.totalAmount = totalAmount
+      }
 
-    // Update receipt
-    const updatedReceipt = await tx.importReceipt.update({
-      where: { id },
-      data: updateData,
-      include: {
-        items: {
-          include: {
-            supplierIngredient: {
-              include: {
-                ingredient: {
-                  select: {
-                    name: true,
-                    unit: true,
-                    image: true,
-                    category: true
-                  }
-                },
-                supplier: {
-                  select: {
-                    name: true
+      // Update receipt
+      const updatedReceipt = await tx.importReceipt.update({
+        where: { id },
+        data: updateData,
+        include: {
+          items: {
+            include: {
+              supplierIngredient: {
+                include: {
+                  ingredient: {
+                    select: {
+                      name: true,
+                      unit: true,
+                      image: true,
+                      category: true
+                    }
+                  },
+                  supplier: {
+                    select: {
+                      name: true
+                    }
                   }
                 }
               }
             }
-          }
-        },
-        supplier: {
-          select: {
-            name: true
-          }
-        },
-        createdByAccount: {
-          select: {
-            name: true
+          },
+          supplier: {
+            select: {
+              name: true
+            }
+          },
+          createdByAccount: {
+            select: {
+              name: true
+            }
           }
         }
-      }
-    })
+      })
 
-    return {
-      id: updatedReceipt.id,
-      code: updatedReceipt.code,
-      supplierId: updatedReceipt.supplierId,
-      importDate: updatedReceipt.importDate,
-      totalAmount: updatedReceipt.totalAmount,
-      status: updatedReceipt.status,
-      note: updatedReceipt.note,
-      createdBy: updatedReceipt.createdBy,
-      createdAt: updatedReceipt.createdAt,
-      updatedAt: updatedReceipt.updatedAt,
-      supplierName: updatedReceipt.supplier.name,
-      createdByName: updatedReceipt.createdByAccount.name,
-      items: updatedReceipt.items.map((item) => ({
-        id: item.id,
-        importReceiptId: item.importReceiptId,
-        supplierIngredientId: item.supplierIngredientId,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-        batchNumber: item.batchNumber,
-        expiryDate: item.expiryDate,
-        note: item.note,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-        ingredientName: item.supplierIngredient.ingredient.name,
-        ingredientUnit: item.supplierIngredient.ingredient.unit,
-        ingredientImage: item.supplierIngredient.ingredient.image,
-        ingredientCategory: item.supplierIngredient.ingredient.category,
-        supplierName: item.supplierIngredient.supplier.name
-      }))
+      return {
+        id: updatedReceipt.id,
+        code: updatedReceipt.code,
+        supplierId: updatedReceipt.supplierId,
+        importDate: updatedReceipt.importDate,
+        totalAmount: updatedReceipt.totalAmount,
+        status: updatedReceipt.status,
+        note: updatedReceipt.note,
+        createdBy: updatedReceipt.createdBy,
+        createdAt: updatedReceipt.createdAt,
+        updatedAt: updatedReceipt.updatedAt,
+        supplierName: updatedReceipt.supplier.name,
+        createdByName: updatedReceipt.createdByAccount.name,
+        items: updatedReceipt.items.map((item) => ({
+          id: item.id,
+          importReceiptId: item.importReceiptId,
+          supplierIngredientId: item.supplierIngredientId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+          batchNumber: item.batchNumber,
+          expiryDate: item.expiryDate,
+          note: item.note,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          ingredientName: item.supplierIngredient.ingredient.name,
+          ingredientUnit: item.supplierIngredient.ingredient.unit,
+          ingredientImage: item.supplierIngredient.ingredient.image,
+          ingredientCategory: item.supplierIngredient.ingredient.category,
+          supplierName: item.supplierIngredient.supplier.name
+        }))
+      }
+    },
+    {
+      maxWait: 10000,
+      timeout: 10000
     }
-  })
+  )
 }

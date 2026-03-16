@@ -10,7 +10,7 @@ import {
   updateDish,
   updateIngredientToDish
 } from '@/controllers/dish.controller'
-import { pauseApiHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
+import { requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
   AddIngredientToDish,
   AddIngredientToDishType,
@@ -40,6 +40,13 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 
 export default async function dishRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
+  fastify.addHook(
+    'preValidation',
+    fastify.auth([requireLoginedHook, requireOwnerHook], {
+      relation: 'and'
+    })
+  )
+
   fastify.get<{
     Reply: DishListResType
     Querystring: DishQueryType
@@ -102,11 +109,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
         response: {
           200: DishRes
         }
-      },
-      // Login AND (Owner OR Employee)
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const dish = await createDish(request.body)
@@ -130,10 +133,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
         response: {
           200: DishRes
         }
-      },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const dish = await updateDish(request.params.id, request.body)
@@ -155,10 +155,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
         response: {
           200: DishRes
         }
-      },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const result = await deleteDish(request.params.id)
@@ -227,10 +224,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
         response: {
           200: DishIngredientRes
         }
-      },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const menuItemList = await addIngredientToDish(request.body)
@@ -255,10 +249,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
         response: {
           200: DishIngredientRes
         }
-      },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const menuItemList = await updateIngredientToDish(request.params.id, request.body)
@@ -281,10 +272,7 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
         response: {
           200: DishIngredientRes
         }
-      },
-      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook]], {
-        relation: 'and'
-      })
+      }
     },
     async (request, reply) => {
       const result = await deleteIngredientFromDish(request.params.id)

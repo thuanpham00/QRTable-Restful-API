@@ -141,7 +141,10 @@ export default async function paymentRoutes(fastify: FastifyInstance, options: F
           200: PaymentRes
         },
         params: PaymentIdParam
-      }
+      },
+      preValidation: fastify.auth([requireOwnerHook, requireEmployeeHook], {
+        relation: 'or'
+      })
     },
     async (request, reply) => {
       const payment = await getDetailPayment(request.params.id)
