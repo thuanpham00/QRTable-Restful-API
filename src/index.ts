@@ -30,7 +30,6 @@ import paymentRoutes from '@/routes/payment.route'
 import sepayRoutes from '@/routes/seepay.route'
 import autoRotateTableTokenJob from '@/jobs/autoRotateTableTokenJob'
 import tableSessionsRoutes from '@/routes/table-session.route'
-import geminiRoutes from '@/routes/gemini.route'
 import supplierRoutes from '@/routes/supplier.route'
 import suppliesRoutes from '@/routes/supply.route'
 import inventoryStockRoutes from '@/routes/inventory-stocks.route'
@@ -38,6 +37,7 @@ import startBatchStatusCronJob from '@/jobs/startBatchStatus.job'
 import inventoryBatchRoutes from '@/routes/inventory-batch.route'
 import exportReceiptRoutes from '@/routes/export-receipts.route'
 import importReceiptRoutes from '@/routes/import-receipts.route'
+import chatbotRoutes from '@/routes/chatbot.route'
 
 const fastify = Fastify({
   logger: false
@@ -124,8 +124,8 @@ const start = async () => {
     fastify.register(sepayRoutes, {
       prefix: '/sepay'
     })
-    fastify.register(geminiRoutes, {
-      prefix: '/gemini'
+    fastify.register(chatbotRoutes, {
+      prefix: '/chatbot'
     })
     fastify.register(supplierRoutes, {
       prefix: '/suppliers'

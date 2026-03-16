@@ -1,4 +1,13 @@
+import { BaseQuery, PaginationRes } from '@/schemaValidations/util.schema'
 import z from 'zod'
+
+export const ChatbotQuery = BaseQuery.and(
+  z.object({
+    pagination: z.string().optional()
+  })
+)
+
+export type ChatbotQueryType = z.TypeOf<typeof ChatbotQuery>
 
 // Chat request body
 export const ChatBody = z
@@ -66,3 +75,19 @@ export const ChatStoryListRes = z.object({
 })
 
 export type ChatStoryListResType = z.TypeOf<typeof ChatStoryListRes>
+
+// Response cho danh sách chat history của tất cả guests
+export const ChatStoryAllGuestsListRes = z.object({
+  data: z.array(
+    z.object({
+      guestId: z.number(),
+      guestName: z.string(),
+      tableSessionId: z.number().nullable(),
+      messages: z.array(ChatStorySchema)
+    })
+  ),
+  message: z.string(),
+  pagination: PaginationRes.nullable()
+})
+
+export type ChatStoryAllGuestsListResType = z.TypeOf<typeof ChatStoryAllGuestsListRes>
