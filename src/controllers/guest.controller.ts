@@ -272,7 +272,8 @@ export const guestCreateOrdersController = async (guestId: number, body: GuestCr
               orderMode: body.typeOrder,
               orderHandlerId: null,
               status: OrderStatus.Pending,
-              tableSessionId: guest.tableSessionId
+              tableSessionId: guest.tableSessionId,
+              note: order.note
             },
             include: {
               dishSnapshot: true,
@@ -320,4 +321,35 @@ export const guestGetOrdersController = async (guestId: number) => {
     }
   })
   return orders
+}
+
+export const guestGetPaymentsController = async (guestId: number) => {
+  const payments = await prisma.payment.findMany({
+    where: {
+      guestId
+    },
+    include: {
+      guest: {
+        select: {
+          id: true,
+          name: true,
+          tableNumber: true,
+          dietaryPreferences: true,
+          allergyInfo: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      }
+    }
+  })
+  const formattedPayments = payments.map((payment) => ({
+    id: payment.id,
+    totalAmount: payment.totalAmount,
+    paymentMethod: payment.paymentMethod,
+    status: payment.status,
+    guest: payment.guest,
+    createdAt: payment.createdAt,
+    updatedAt: payment.updatedAt
+  }))
+  return formattedPayments
 }

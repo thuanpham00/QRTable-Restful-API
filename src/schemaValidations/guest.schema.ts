@@ -77,7 +77,8 @@ export const GuestCreateOrdersBody = z.object({
   listOrder: z.array(
     z.object({
       menuItemId: z.number(),
-      quantity: z.number()
+      quantity: z.number(),
+      note: z.string().nullable()
     })
   ),
   typeOrder: z.enum(OrderModeTypeValues)
@@ -99,7 +100,7 @@ export type GuestGetOrdersResType = z.TypeOf<typeof GuestGetOrdersRes>
 export const GuestSchema = z.object({
   id: z.number(),
   name: z.string(),
-  tableNumber: z.number().nullable(),
+  tableNumber: z.number(),
   dietaryPreferences: z.string().nullable(),
   allergyInfo: z.string().nullable(),
   createdAt: z.date(),
@@ -107,6 +108,24 @@ export const GuestSchema = z.object({
 })
 
 export type GuestSchemaType = z.TypeOf<typeof GuestSchema>
+
+// GuestGetPaymentsRes schema
+export const GuestGetPaymentsRes = z.object({
+  message: z.string(),
+  data: z.array(
+    z.object({
+      id: z.number(),
+      totalAmount: z.number(),
+      paymentMethod: z.string(),
+      status: z.string(),
+      guest: GuestSchema,
+      createdAt: z.date(),
+      updatedAt: z.date()
+    })
+  )
+})
+
+export type GuestGetPaymentsResType = z.TypeOf<typeof GuestGetPaymentsRes>
 
 // Update guest profile (sau khi đăng nhập)
 export const UpdateGuestBody = z

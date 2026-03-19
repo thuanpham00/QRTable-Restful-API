@@ -82,6 +82,7 @@ Table Order {
   tableSessionId Int
   tableSession TableSession
   exportReceipts ExportReceipt [not null]
+  note String
   orderMode String [not null, default: 'DINE_IN']
   status String [not null, default: 'Pending']
   createdAt DateTime [default: `now()`, not null]

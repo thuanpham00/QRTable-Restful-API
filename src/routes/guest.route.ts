@@ -2,6 +2,7 @@ import { ManagerRoom, Role } from '@/constants/type'
 import {
   guestCreateOrdersController,
   guestGetOrdersController,
+  guestGetPaymentsController,
   guestLoginController,
   guestLogoutController,
   guestRefreshTokenController
@@ -23,6 +24,8 @@ import {
   GuestCreateOrdersResType,
   GuestGetOrdersRes,
   GuestGetOrdersResType,
+  GuestGetPaymentsRes,
+  GuestGetPaymentsResType,
   GuestLoginBody,
   GuestLoginBodyType,
   GuestLoginRes,
@@ -154,6 +157,28 @@ export default async function guestRoutes(fastify: FastifyInstance, options: Fas
       reply.send({
         message: 'Lấy danh sách đơn hàng thành công',
         data: result as GuestGetOrdersResType['data']
+      })
+    }
+  )
+
+  fastify.get<{
+    Reply: GuestGetPaymentsResType
+  }>(
+    '/payments',
+    {
+      schema: {
+        response: {
+          200: GuestGetPaymentsRes
+        }
+      },
+      preValidation: fastify.auth([requireLoginedHook, requireGuestHook])
+    },
+    async (request, reply) => {
+      const guestId = request.decodedAccessToken?.userId as number
+      const result = await guestGetPaymentsController(guestId)
+      reply.send({
+        message: 'Lấy danh sách thanh toán thành công',
+        data: result as GuestGetPaymentsResType['data']
       })
     }
   )
