@@ -119,6 +119,7 @@ export const GuestGetPaymentsRes = z.object({
       paymentMethod: z.string(),
       status: z.string(),
       guest: GuestSchema,
+      orders: z.array(OrderSchema),
       createdAt: z.date(),
       updatedAt: z.date()
     })

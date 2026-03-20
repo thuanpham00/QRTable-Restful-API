@@ -339,6 +339,13 @@ export const guestGetPaymentsController = async (guestId: number) => {
           createdAt: true,
           updatedAt: true
         }
+      },
+      orders: {
+        include: {
+          dishSnapshot: true,
+          orderHandler: true,
+          guest: true
+        }
       }
     }
   })
@@ -348,6 +355,7 @@ export const guestGetPaymentsController = async (guestId: number) => {
     paymentMethod: payment.paymentMethod,
     status: payment.status,
     guest: payment.guest,
+    orders: payment.orders,
     createdAt: payment.createdAt,
     updatedAt: payment.updatedAt
   }))
