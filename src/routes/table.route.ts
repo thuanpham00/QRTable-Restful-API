@@ -52,6 +52,7 @@ export default async function tablesRoutes(fastify: FastifyInstance, options: Fa
         page: request.query.page || 1,
         limit: request.query.limit || 5,
         number: request.query.number,
+        status: request.query.status,
         pagination: request.query.pagination
       })
       reply.send({

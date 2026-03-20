@@ -4,7 +4,7 @@ import { CreateTableBodyType, TableQueryType, UpdateTableBodyType } from '@/sche
 import { EntityError, isPrismaClientKnownRequestError } from '@/utils/errors'
 import { randomId } from '@/utils/helpers'
 
-export const getTableList = async ({ page, limit, number, pagination }: TableQueryType) => {
+export const getTableList = async ({ page, limit, number, status, pagination }: TableQueryType) => {
   if (pagination === 'false') {
     const tables = await prisma.table.findMany({
       orderBy: { createdAt: 'desc' }
@@ -15,46 +15,24 @@ export const getTableList = async ({ page, limit, number, pagination }: TableQue
     }
   }
 
-  const skip = (page - 1) * limit
+  let allTables = await prisma.table.findMany({
+    orderBy: { createdAt: 'desc' }
+  })
 
-  // ✅ Lấy tất cả tables, filter trong memory
-  const allTables =
-    number !== undefined
-      ? await prisma.table.findMany({
-          orderBy: { createdAt: 'desc' }
-        })
-      : null
-
-  if (allTables && number !== undefined) {
-    // Filter trong JS - tìm số có chứa number
-    const filtered = allTables.filter((table) => table.number.toString().includes(number.toString()))
-
-    const total = filtered.length
-    const paginatedTables = filtered.slice(skip, skip + limit)
-
-    return {
-      data: paginatedTables,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
-    }
+  if (number !== undefined) {
+    allTables = allTables.filter((table) => table.number.toString().includes(number.toString()))
   }
 
-  // Không có filter - query bình thường
-  const [tables, total] = await Promise.all([
-    prisma.table.findMany({
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.table.count()
-  ])
+  if (status !== undefined) {
+    allTables = allTables.filter((table) => table.status === status)
+  }
+
+  const total = allTables.length
+  const skip = (page - 1) * limit
+  const paginatedData = allTables.slice(skip, skip + limit)
 
   return {
-    data: tables,
+    data: paginatedData,
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
   }
 }
