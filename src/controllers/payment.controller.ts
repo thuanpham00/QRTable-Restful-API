@@ -13,6 +13,39 @@ import { ManagerRoom, OrderStatus } from '@/constants/type'
 export const createPaymentForTable = async (body: CreatePaymentByTableBodyType, accountId: number, io?: any) => {
   const { tableNumber, paymentMethod, guestIds } = body
 
+  // check nếu đã có payment lẻ trước (trường hợp khách đã chọn thanh toán riêng lẻ -> chuyển sang trả cả bàn) - ưu tiên tìm payment lẻ trước, nếu không có mới tìm paymentGroup
+  const existingPayment = await prisma.payment.findMany({
+    where: {
+      AND: [
+        {
+          guestId: {
+            in: guestIds
+          }
+        },
+        { tableNumber: tableNumber }
+      ], // đảm bảo cùng guestId và tableNumber
+      status: { in: ['Pending'] }
+    }
+  })
+  if (existingPayment.length > 0) {
+    await prisma.$transaction([
+      prisma.payment.updateMany({
+        where: {
+          id: {
+            in: existingPayment.map((p) => p.id)
+          }
+        },
+        data: { status: 'Cancelled' }
+      }),
+      prisma.order.updateMany({
+        where: {
+          paymentId: { in: existingPayment.map((p) => p.id) }
+        },
+        data: { paymentId: null, status: OrderStatus.Delivered }
+      })
+    ])
+  }
+
   const existingGroup = await prisma.paymentGroup.findFirst({
     where: {
       tableNumber,
@@ -285,6 +318,49 @@ export const createPaymentForTable = async (body: CreatePaymentByTableBodyType, 
 // Controller thanh toán các hóa đơn dựa trên guestId
 export const createPayment = async (body: CreatePaymentBodyType, accountId: number, io: any) => {
   const { guestId, tableNumber, orderIds, totalAmount, paymentMethod, note } = body
+
+  // check nếu đã có paymentGroup trước (trường hợp khách đã chọn thanh toán cả bàn -> chuyển sang trả lẻ từng phần) - ưu tiên tìm paymentGroup trước, nếu không có mới tìm payment đơn lẻ
+  const existingGroup = await prisma.paymentGroup.findFirst({
+    where: {
+      tableNumber,
+      status: 'Pending',
+      paymentMethod: 'SEPAY'
+    },
+    include: {
+      payments: {
+        include: {
+          orders: {
+            include: {
+              dishSnapshot: true,
+              orderHandler: true,
+              guest: true
+            }
+          }
+        }
+      }
+    }
+  })
+
+  if (existingGroup) {
+    const paymentId = existingGroup.payments.map((p) => p.id)
+    // cập nhật hủy paymentGroup và các payment liên quan
+    await prisma.$transaction([
+      prisma.paymentGroup.update({
+        where: { id: existingGroup.id },
+        data: { status: 'Cancelled' }
+      }),
+      prisma.payment.updateMany({
+        where: { paymentGroupId: existingGroup.id },
+        data: { status: 'Cancelled' }
+      }),
+      prisma.order.updateMany({
+        where: {
+          paymentId: { in: paymentId }
+        },
+        data: { paymentId: null, status: OrderStatus.Delivered }
+      })
+    ])
+  }
 
   // 2.5. Kiểm tra payment đã tồn tại chưa
   const existingPayment = await prisma.payment.findFirst({
