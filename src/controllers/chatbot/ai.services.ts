@@ -1,49 +1,57 @@
-import envConfig from '@/config'
-import Groq from 'groq-sdk'
+const OLLAMA_URL = 'http://127.0.0.1:11434/api/chat'
 
-const groq = new Groq({
-  apiKey: envConfig.GROQ_API_KEY
-})
-
-const CHAT_MODEL = 'llama-3.3-70b-versatile'
-const ANALYSIS_MODEL = 'llama-3.3-70b-versatile'
+const CHAT_MODEL = 'llama3'
+const ANALYSIS_MODEL = 'llama3'
 
 /*
 AI GENERATE CHAT RESPONSE
 */
 export async function generateResponse(prompt: string): Promise<string> {
-  const completion = await groq.chat.completions.create({
-    model: CHAT_MODEL,
-    temperature: 0.7,
-    max_tokens: 1500,
-    messages: [
-      {
-        role: 'system',
-        content: 'Bạn là AI tư vấn món ăn cho nhà hàng. Chỉ gợi ý món trong menu.'
+  const res = await fetch(OLLAMA_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: CHAT_MODEL,
+      messages: [
+        {
+          role: 'system',
+          content: 'Bạn là AI tư vấn món ăn cho nhà hàng. Chỉ gợi ý món trong menu.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      options: {
+        temperature: 0.7,
+        num_predict: 1500
       },
-      {
-        role: 'user',
-        content: prompt
-      }
-    ]
+      stream: false
+    })
   })
 
-  return completion.choices?.[0]?.message?.content || ''
+  const data = await res.json()
+
+  return data.message?.content || ''
 }
 
 /*
 AI ANALYZE USER INTENT
 */
 export async function analyzeUserIntent(message: string) {
-  const completion = await groq.chat.completions.create({
-    model: ANALYSIS_MODEL,
-    temperature: 0.1,
-    max_tokens: 400,
-    response_format: { type: 'json_object' },
-    messages: [
-      {
-        role: 'system',
-        content: `
+  const res = await fetch(OLLAMA_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: ANALYSIS_MODEL,
+      messages: [
+        {
+          role: 'system',
+          content: `
 Phân tích câu hỏi khách hàng về món ăn.
 
 Trả JSON:
@@ -56,17 +64,30 @@ Trả JSON:
 "isGenericQuestion": boolean
 }
 
-Chỉ trả JSON.
+Chỉ trả JSON, không giải thích.
 `
+        },
+        {
+          role: 'user',
+          content: message
+        }
+      ],
+      options: {
+        temperature: 0.1,
+        num_predict: 400
       },
-      {
-        role: 'user',
-        content: message
-      }
-    ]
+      stream: false
+    })
   })
 
-  const text = completion.choices?.[0]?.message?.content || '{}'
+  const data = await res.json()
 
-  return JSON.parse(text)
+  const text = data.message?.content || '{}'
+
+  try {
+    return JSON.parse(text)
+  } catch (err) {
+    console.error('Parse JSON error:', text)
+    return {}
+  }
 }

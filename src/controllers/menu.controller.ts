@@ -74,7 +74,7 @@ export const getSuggestedMenu = async () => {
   // Get top 5 dishes by popularity, then return their menuItems belonging to an active menu
   const top = await prisma.dish.findMany({
     orderBy: { popularity: 'desc' },
-    take: 5,
+    take: 6,
     select: { id: true }
   })
   const topIds = top.map((t) => t.id)

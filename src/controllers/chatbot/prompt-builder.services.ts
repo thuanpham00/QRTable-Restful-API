@@ -2,7 +2,7 @@ export function buildPrompt(message: string, guest: any, dishes: any[]) {
   const menuContext = dishes
     .map((d, i) => {
       const ingredients = d.dishIngredients?.map((di: any) => di.ingredient.name).join(', ') || 'unknown'
-
+      const menuItemActivePrice = d.menuItems[0].price
       const allergens =
         d.dishIngredients
           ?.map((di: any) => di.ingredient.allergenType)
@@ -11,9 +11,10 @@ export function buildPrompt(message: string, guest: any, dishes: any[]) {
 
       return `
 ${i + 1}. ${d.name}
-price: ${d.price}
+price: ${menuItemActivePrice}
 category: ${d.category?.name}
 spicyLevel: ${d.spicyLevel}
+popular: ${d.popularity}
 ingredients: ${ingredients}
 allergens: ${allergens}
 description: ${d.description}
@@ -40,5 +41,6 @@ Quy tắc:
 - Chỉ gợi ý món trong menu
 - Nếu khách dị ứng nguyên liệu thì KHÔNG gợi ý món đó
 - Trả lời ngắn gọn, thân thiện
+- Trả lời bằng tiếng Việt, không sử dụng tiếng Anh
 `
 }

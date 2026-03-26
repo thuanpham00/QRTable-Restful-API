@@ -21,28 +21,37 @@ export async function retrieveMenuContext(analysis: any) {
     }
   }
 
-  if (analysis.category) {
-    where.category = {
-      name: {
-        contains: analysis.category
-      }
-    }
-  }
+  // if (analysis.category) {
+  //   where.category = {
+  //     name: {
+  //       contains: analysis.category
+  //     }
+  //   }
+  // }
 
   const dishes = await prisma.dish.findMany({
-    where,
+    where: {
+      ...where,
+      menuItems: {
+        some: {
+          menu: {
+            isActive: true
+          }
+        }
+      }
+    },
     include: {
       category: true,
       dishIngredients: {
         include: {
           ingredient: true
         }
-      }
+      },
+      menuItems: { include: { menu: true } }
     },
     orderBy: {
       popularity: 'desc'
-    },
-    take: 10
+    }
   })
 
   return dishes
