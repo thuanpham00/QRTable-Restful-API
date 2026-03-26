@@ -46,7 +46,7 @@ export const getInventoryStockList = async ({ page, limit, ingredientName, lowSt
   }
 
   // Filter lowStock nếu cần (quantity < minStock)
-  if (lowStock) {
+  if (lowStock === 'true') {
     stocksWithInfo = stocksWithInfo.filter((stock) => stock.minStock !== null && stock.quantity < stock.minStock)
   }
 

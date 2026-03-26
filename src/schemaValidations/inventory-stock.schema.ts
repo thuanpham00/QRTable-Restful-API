@@ -4,7 +4,7 @@ import z from 'zod'
 export const InventoryStockQuery = BaseQuery.and(
   z.object({
     ingredientName: z.string().trim().max(256).optional(),
-    lowStock: z.coerce.boolean().optional() // Lọc hàng tồn kho thấp (quantity < minStock)
+    lowStock: z.string().optional() // Lọc hàng tồn kho thấp (quantity < minStock)
   })
 )
 
