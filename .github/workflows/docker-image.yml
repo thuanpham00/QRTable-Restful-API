@@ -13,6 +13,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      - uses: actions/checkout@v4
+      - name: 'Create env file'
+        run: echo "${{ secrets.QRTABLE_ENV }}" > .env
+      - name: Build the Docker image
+        run: docker build --progress=plain -t thuanpham00/qrtable-server:v2 -f Dockerfile.dev .
+      - name: Log in to Docker Hub
+        run: docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Push the Docker image
+        run: docker push thuanpham00/qrtable-server:v2

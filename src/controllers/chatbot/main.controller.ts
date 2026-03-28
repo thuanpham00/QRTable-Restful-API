@@ -1,6 +1,6 @@
 import { generateResponse } from '@/controllers/chatbot/ai.services'
 import { detectIntent } from '@/controllers/chatbot/intent.services'
-import { retrieveMenuContext } from '@/controllers/chatbot/menu-retrival.services'
+import { retrieveAndRankDishes } from '@/controllers/chatbot/menu-retrival.services'
 import { buildPrompt } from '@/controllers/chatbot/prompt-builder.services'
 import prisma from '@/database'
 import { ChatbotQueryType } from '@/schemaValidations/chatbot.schema'
@@ -9,21 +9,17 @@ export async function handleMessage(message: string, guestId?: number, sessionId
   const start = Date.now()
 
   try {
-    const guest = guestId
-      ? await prisma.guest.findUnique({
-          where: { id: guestId }
-        })
-      : null
+    const guest = guestId ? await prisma.guest.findUnique({ where: { id: guestId } }) : null
 
     const { intent, analysis } = await detectIntent(message)
 
-    const dishes = await retrieveMenuContext(analysis)
+    const dishes = await retrieveAndRankDishes(message, guest)
 
     const prompt = buildPrompt(message, guest, dishes)
 
     const aiResponse = await generateResponse(prompt)
 
-    const dishIds = dishes.map((d) => d.id)
+    const dishIds = dishes.map((d: any) => d.id)
 
     if (sessionId) {
       await prisma.chatHistory.create({

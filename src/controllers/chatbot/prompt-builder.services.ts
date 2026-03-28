@@ -1,8 +1,12 @@
+function formatPrice(price: number) {
+  return price.toLocaleString('vi-VN')
+}
+
 export function buildPrompt(message: string, guest: any, dishes: any[]) {
   const menuContext = dishes
     .map((d, i) => {
       const ingredients = d.dishIngredients?.map((di: any) => di.ingredient.name).join(', ') || 'unknown'
-      const menuItemActivePrice = d.menuItems[0].price
+      const menuItemActivePrice = d.menuItems.filter((mi: any) => mi.menu.isActive)[0]?.price
       const allergens =
         d.dishIngredients
           ?.map((di: any) => di.ingredient.allergenType)
@@ -11,7 +15,7 @@ export function buildPrompt(message: string, guest: any, dishes: any[]) {
 
       return `
 ${i + 1}. ${d.name}
-price: ${menuItemActivePrice}
+price: ${formatPrice(menuItemActivePrice)}
 category: ${d.category?.name}
 spicyLevel: ${d.spicyLevel}
 popular: ${d.popularity}
@@ -30,17 +34,20 @@ name: ${guest?.name || 'guest'}
 dietary: ${guest?.dietaryPreferences || 'none'}
 allergy: ${guest?.allergyInfo || 'none'}
 
-Menu:
+DANH SÁCH MÓN ĂN (CHỈ ĐƯỢC CHỌN TRONG ĐÂY):
 
 ${menuContext}
 
-Khách hỏi:
+Câu hỏi khách:
 "${message}"
 
-Quy tắc:
-- Chỉ gợi ý món trong menu
-- Nếu khách dị ứng nguyên liệu thì KHÔNG gợi ý món đó
-- Trả lời ngắn gọn, thân thiện
-- Trả lời bằng tiếng Việt, không sử dụng tiếng Anh
+QUY TẮC BẮT BUỘC:
+- CHỈ được chọn món trong danh sách trên
+- KHÔNG được tự tạo món mới
+- Nếu không có món phù hợp → nói: "Hiện tại chưa có món phù hợp"
+- Ưu tiên món phù hợp với yêu cầu khách
+- Trả lời ngắn gọn, tự nhiên và dùng tiếng Việt không sử dụng tiếng Anh
+
+Trả lời:
 `
 }
