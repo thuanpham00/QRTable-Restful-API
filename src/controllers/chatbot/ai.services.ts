@@ -1,7 +1,7 @@
 const OLLAMA_URL = 'http://127.0.0.1:11434/api/chat'
 const CHAT_MODEL = 'llama3'
 const ANALYSIS_MODEL = 'llama3'
-const OLLAMA_TIMEOUT_MS = 30_000
+const OLLAMA_TIMEOUT_MS = 60_000
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
